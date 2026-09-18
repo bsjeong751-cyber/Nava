@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nava Snake</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>🐍 Nava Snake</h1>
+      <div class="scores">
+        <div class="score-box">
+          <span class="label">점수</span>
+          <span id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="label">최고점수</span>
+          <span id="highScore">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="board-wrap">
+      <canvas id="board" width="400" height="400"></canvas>
+      <div id="overlay" class="overlay">
+        <div class="overlay-card">
+          <h2 id="overlayTitle">Nava Snake</h2>
+          <p id="overlayMsg">방향키 또는 스와이프로 조작하세요.<br>시작하려면 아무 키나 누르거나 탭하세요.</p>
+          <button id="startBtn">시작하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="dpad">
+        <button class="dpad-btn up" data-dir="up" aria-label="위">▲</button>
+        <div class="dpad-row">
+          <button class="dpad-btn left" data-dir="left" aria-label="왼쪽">◀</button>
+          <button class="dpad-btn down" data-dir="down" aria-label="아래">▼</button>
+          <button class="dpad-btn right" data-dir="right" aria-label="오른쪽">▶</button>
+        </div>
+      </div>
+      <div class="options">
+        <label for="speed">속도</label>
+        <select id="speed">
+          <option value="140">느림</option>
+          <option value="100" selected>보통</option>
+          <option value="70">빠름</option>
+          <option value="45">매우 빠름</option>
+        </select>
+        <button id="pauseBtn">일시정지</button>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>Nava 프로젝트의 첫 미니게임 🎮</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
