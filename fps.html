@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Nava Strike</title>
 <style>
   :root {
@@ -489,26 +489,42 @@ addBox(ARENA, 0, 1, ARENA * 2, WALL_H, 0x1e293b);
 
 // Cover / obstacles
 const OBSTACLES = [
-  [-10, -6, 3, 3, 2.2, 0x334155],
-  [9, -11, 4, 2, 2.6, 0x3f4a5f],
-  [14, 5, 2.6, 2.6, 3, 0x334155],
-  [-16, 10, 3, 5, 2.2, 0x3f4a5f],
-  [0, 2, 3, 3, 2.8, 0x475569],
-  [-7, 17, 2, 2, 4.2, 0x334155],
-  [18, -18, 5, 2, 2.2, 0x3f4a5f],
-  [-20, -17, 2, 2, 5, 0x475569],
-  [7, 19, 3, 3, 2.4, 0x334155],
-  [-4, -21, 4, 2, 2.2, 0x3f4a5f],
-  [22, 14, 2.4, 2.4, 3.4, 0x334155],
-  [-22, 2, 2.2, 2.2, 2.6, 0x3f4a5f],
+  // Center cluster
+  [-8, -5, 4, 4, 2.5, 0x334155],
+  [5, -8, 3.5, 3.5, 2.8, 0x3f4a5f],
+  [0, 3, 4, 3, 3.2, 0x475569],
+
+  // North wall
+  [-15, 12, 5, 3, 2.3, 0x334155],
+  [8, 14, 3.5, 4, 2.6, 0x3f4a5f],
+  [18, 10, 4, 2.5, 3.1, 0x475569],
+
+  // South wall
+  [-12, -15, 3.5, 5, 2.4, 0x3f4a5f],
+  [10, -18, 5, 3, 2.2, 0x334155],
+  [20, -12, 3, 3, 3.5, 0x475569],
+
+  // West side
+  [-22, -8, 2.5, 4, 2.8, 0x334155],
+  [-20, 6, 4, 2.5, 2.5, 0x3f4a5f],
+  [-18, 18, 3, 3.5, 3.2, 0x475569],
+
+  // East side
+  [22, 5, 2.5, 5, 2.6, 0x3f4a5f],
+  [20, -6, 3.5, 3, 2.9, 0x334155],
+  [21, 16, 4, 3, 2.4, 0x475569],
+
+  // Diagonal features
+  [-6, 19, 3.5, 3, 3.8, 0x334155],
+  [14, -22, 3, 4, 2.3, 0x3f4a5f],
 ];
 OBSTACLES.forEach(([x, z, w, d, h, color]) => addBox(x, z, w, d, h, color));
 
 /* Sky */
 const skyMat = new THREE.ShaderMaterial({
   uniforms: {
-    topColor: { value: new THREE.Color(0x3f5c94) },
-    bottomColor: { value: new THREE.Color(0x131c2e) },
+    topColor: { value: new THREE.Color(0x5a7ab8) },
+    bottomColor: { value: new THREE.Color(0x2a3a4e) },
     offset: { value: 8 },
     exponent: { value: 0.6 },
   },
@@ -631,9 +647,9 @@ const player = {
   eyeHeight: 1.7,
   health: 100,
   maxHealth: 100,
-  ammo: 30,
-  magSize: 30,
-  reserve: 90,
+  ammo: 60,
+  magSize: 60,
+  reserve: 360,
   reloading: false,
   reloadUntil: 0,
   lastFire: 0,
