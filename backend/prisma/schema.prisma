@@ -1,0 +1,251 @@
+// 노바리아 데이터베이스 스키마 (MVP 범위)
+// 결제/제휴/GPS/이미지분석/음성 관련 테이블은 2차/3차 개발에서 추가한다.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TravelPace {
+  RELAXED
+  NORMAL
+  ACTIVE
+  INTENSE
+}
+
+enum Budget {
+  VERY_LOW
+  LOW
+  NORMAL
+  COMFORTABLE
+  LUXURY
+  CUSTOM
+}
+
+enum Mobility {
+  WALK
+  PUBLIC_TRANSIT
+  BUS
+  SUBWAY
+  CAR
+  TAXI
+  BICYCLE
+}
+
+enum RouteType {
+  BUDGET // 가성비
+  OPTIMIZED // 동선 최적화
+  LOCAL // 현지 감성
+}
+
+enum TripVisibility {
+  PRIVATE
+  LINK
+  PUBLIC
+}
+
+enum ReportReason {
+  SPAM
+  AD
+  ABUSE
+  HATE
+  FRAUD
+  MISINFORMATION
+  ILLEGAL
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  nickname     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  preference    UserPreference?
+  trips         Trip[]
+  posts         CommunityPost[]
+  comments      CommunityComment[]
+  reportsFiled  CommunityReport[]
+  savedPlaces   SavedPlace[]
+
+  @@map("users")
+}
+
+// 사용자 행동 기반 취향 누적치 (62항: 커뮤니티/추천 개인화 근거, MVP에서는 최소 필드만)
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests String[] // 예: ["맛집", "카페", "야경"]
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+// 여행 하나 = 가이드북 한 권
+model Trip {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  destination   String
+  startDate     DateTime
+  endDate       DateTime
+  interests     String[]
+  mustVisit     String[] // 사용자가 직접 입력한 필수 방문 장소 (매칭 전 원문)
+  budget        Budget
+  budgetAmount  Int? // CUSTOM일 때 직접 입력 금액
+  pace          TravelPace
+  mobility      Mobility[]
+  visibility    TripVisibility @default(PRIVATE)
+  selectedRouteId String?      @unique
+  forkedFromPostId String? // 커뮤니티에서 가져온 경우 원본 게시물 id
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  routes        Route[]        @relation("TripRoutes")
+  selectedRoute Route?         @relation("SelectedRoute", fields: [selectedRouteId], references: [id])
+  days          TripDay[]
+  posts         CommunityPost[]
+
+  @@map("trips")
+}
+
+model TripDay {
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  dayNumber Int
+  date      DateTime
+
+  @@unique([tripId, dayNumber])
+  @@map("trip_days")
+}
+
+// 추천 루트 비교안 (가성비 / 동선최적화 / 현지감성)
+model Route {
+  id                   String   @id @default(cuid())
+  tripId               String
+  trip                 Trip     @relation("TripRoutes", fields: [tripId], references: [id], onDelete: Cascade)
+  type                 RouteType
+  name                 String
+  estimatedBudgetMin   Int
+  estimatedBudgetMax   Int
+  totalDurationMinutes Int
+  totalDistanceMeters  Int
+  reasoningSummary     String
+  createdAt            DateTime @default(now())
+
+  places        RoutePlace[]
+  selectedByTrip Trip?      @relation("SelectedRoute")
+
+  @@map("routes")
+}
+
+// 루트 안의 개별 방문 항목 (장소 방문 또는 휴식/식사)
+model RoutePlace {
+  id                String   @id @default(cuid())
+  routeId           String
+  route             Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  placeId           String?
+  place             Place?   @relation(fields: [placeId], references: [id])
+  dayNumber         Int
+  orderIndex        Int
+  arrivalTime       String // "HH:mm" — 실제 날짜가 아닌 하루 내 시간
+  stayMinutes       Int
+  mobilityToHere    Mobility?
+  travelMinutes     Int      @default(0)
+  slotType          String   @default("PLACE") // PLACE | REST | MEAL
+  note              String?
+
+  @@map("route_places")
+}
+
+// 장소 (기획서 59항). source는 데이터 출처를 명시해 신뢰성 표시에 사용
+model Place {
+  id                String   @id @default(cuid())
+  name              String
+  category          String
+  latitude           Float
+  longitude          Float
+  address           String
+  openingHours      String?
+  rating            Float?
+  reviewCount       Int?
+  priceLevel        Int?
+  estimatedStayMinutes Int   @default(60)
+  tags              String[]
+  description       String?
+  source            String   @default("MOCK") // MOCK | MAP_API | USER_SUBMITTED
+  lastVerifiedAt    DateTime?
+  imageUrl          String?
+
+  routePlaces  RoutePlace[]
+  savedBy      SavedPlace[]
+
+  @@map("places")
+}
+
+model SavedPlace {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placeId   String
+  place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, placeId])
+  @@map("saved_places")
+}
+
+model CommunityPost {
+  id            String   @id @default(cuid())
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tripId        String
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  likeCount     Int      @default(0)
+  saveCount     Int      @default(0)
+  viewCount     Int      @default(0)
+  isHidden      Boolean  @default(false) // 신고 누적 시 자동 숨김
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  comments CommunityComment[]
+  reports  CommunityReport[]
+
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@map("community_comments")
+}
+
+model CommunityReport {
+  id        String       @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter  User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason    ReportReason
+  detail    String?
+  createdAt DateTime     @default(now())
+
+  @@map("community_reports")
+}
