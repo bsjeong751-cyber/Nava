@@ -244,6 +244,70 @@
   .final-stats .l { font-size: 0.7rem; color: var(--muted); }
 
   #loadingScreen p { color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- Touch controls (mobile) ---------- */
+  #touchControls { display: none; }
+  body.touch-ui #touchControls { display: block; }
+  body.touch-ui #healthWrap, body.touch-ui #ammoWrap { bottom: 280px; }
+
+  #joyZone {
+    position: fixed;
+    left: 0; bottom: 0;
+    width: 42%; height: 58%;
+    pointer-events: auto;
+    touch-action: none;
+    z-index: 5;
+  }
+  #joyBase {
+    position: fixed;
+    left: 28px; bottom: 28px;
+    width: 118px; height: 118px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.22);
+    z-index: 6;
+  }
+  #joyStick {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 52px; height: 52px;
+    margin-left: -26px; margin-top: -26px;
+    border-radius: 50%;
+    background: rgba(239,68,68,0.55);
+    border: 2px solid rgba(239,68,68,0.9);
+    transition: background 0.1s ease;
+  }
+  #lookZone {
+    position: fixed;
+    left: 42%; right: 0; top: 0; bottom: 0;
+    pointer-events: auto;
+    touch-action: none;
+    z-index: 5;
+  }
+  .touch-btn {
+    position: fixed;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.5rem;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.28);
+    z-index: 7;
+    touch-action: none;
+    user-select: none;
+  }
+  #fireBtn {
+    right: 26px; bottom: 108px;
+    width: 84px; height: 84px;
+    background: rgba(239,68,68,0.3);
+    border-color: rgba(239,68,68,0.75);
+    font-size: 1.8rem;
+  }
+  #fireBtn.active { background: rgba(239,68,68,0.55); }
+  #jumpBtn { right: 124px; bottom: 208px; width: 58px; height: 58px; font-size: 1.3rem; }
+  #reloadBtn { right: 26px; bottom: 208px; width: 58px; height: 58px; font-size: 1.2rem; }
 </style>
 </head>
 <body>
@@ -281,14 +345,24 @@
 
   <div id="vignette"></div>
 
+  <div id="touchControls">
+    <div id="joyZone"></div>
+    <div id="joyBase"><div id="joyStick"></div></div>
+    <div id="lookZone"></div>
+    <button id="jumpBtn" class="touch-btn">⤒</button>
+    <button id="reloadBtn" class="touch-btn">⟳</button>
+    <button id="fireBtn" class="touch-btn">🔫</button>
+  </div>
+
   <div id="startScreen" class="screen">
     <div class="card">
       <h1>NAVA <span>STRIKE</span></h1>
-      <p class="sub">웨이브 서바이벌 FPS · 클릭하여 마우스 잠금 후 시작</p>
+      <p class="sub">웨이브 서바이벌 FPS · 탭/클릭하여 시작</p>
       <div class="tips">
         <div><b>WASD</b> 이동 · <b>Shift</b> 스프린트 · <b>Space</b> 점프</div>
         <div><b>마우스</b> 시야 · <b>좌클릭</b> 사격(연사) · <b>R</b> 재장전</div>
         <div><b>ESC</b> 일시정지 · 오렌지=근접형, 보라=원거리형 적</div>
+        <div>📱 <b>모바일</b>: 왼쪽 조이스틱 이동 · 오른쪽 드래그 시야 · 🔫 사격 · ⤒ 점프 · ⟳ 재장전</div>
       </div>
       <div class="sens-row">
         <label for="sensSlider">마우스 감도</label>
@@ -789,13 +863,103 @@ let mouseDown = false;
 canvas.addEventListener("mousedown", (e) => { if (e.button === 0) mouseDown = true; });
 window.addEventListener("mouseup", () => { mouseDown = false; });
 
-document.addEventListener("mousemove", (e) => {
-  if (document.pointerLockElement !== canvas) return;
-  player.yaw -= e.movementX * 0.0022 * sensitivity;
-  player.pitch -= e.movementY * 0.0022 * sensitivity;
+function applyLook(dx, dy, factor) {
+  player.yaw -= dx * factor * sensitivity;
+  player.pitch -= dy * factor * sensitivity;
   const lim = Math.PI / 2 - 0.05;
   player.pitch = Math.max(-lim, Math.min(lim, player.pitch));
+}
+
+document.addEventListener("mousemove", (e) => {
+  if (document.pointerLockElement !== canvas) return;
+  applyLook(e.movementX, e.movementY, 0.0022);
 });
+
+/* ---------- Touch controls ---------- */
+const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+let touchMoveX = 0, touchMoveZ = 0;
+
+if (isTouch) {
+  document.body.classList.add("touch-ui");
+
+  const joyZone = document.getElementById("joyZone");
+  const joyBase = document.getElementById("joyBase");
+  const joyStick = document.getElementById("joyStick");
+  const joyMaxR = 42;
+  let joyTouchId = null;
+
+  function joyCenter() {
+    const r = joyBase.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  function updateJoy(t) {
+    const c = joyCenter();
+    let dx = t.clientX - c.x, dy = t.clientY - c.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > joyMaxR) { dx = (dx / dist) * joyMaxR; dy = (dy / dist) * joyMaxR; }
+    joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+    touchMoveX = dx / joyMaxR;
+    touchMoveZ = dy / joyMaxR;
+  }
+  function resetJoy() {
+    joyTouchId = null;
+    touchMoveX = 0; touchMoveZ = 0;
+    joyStick.style.transform = "translate(0, 0)";
+  }
+  joyZone.addEventListener("touchstart", (e) => {
+    if (joyTouchId === null) {
+      const t = e.changedTouches[0];
+      joyTouchId = t.identifier;
+      updateJoy(t);
+    }
+    e.preventDefault();
+  }, { passive: false });
+  joyZone.addEventListener("touchmove", (e) => {
+    for (const t of e.changedTouches) if (t.identifier === joyTouchId) updateJoy(t);
+    e.preventDefault();
+  }, { passive: false });
+  joyZone.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) if (t.identifier === joyTouchId) resetJoy();
+  });
+  joyZone.addEventListener("touchcancel", () => resetJoy());
+
+  const lookZone = document.getElementById("lookZone");
+  let lookTouchId = null, lastLookX = 0, lastLookY = 0;
+  lookZone.addEventListener("touchstart", (e) => {
+    if (lookTouchId === null) {
+      const t = e.changedTouches[0];
+      lookTouchId = t.identifier;
+      lastLookX = t.clientX; lastLookY = t.clientY;
+      if (gameState !== "playing") beginGame();
+    }
+    e.preventDefault();
+  }, { passive: false });
+  lookZone.addEventListener("touchmove", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === lookTouchId) {
+        applyLook(t.clientX - lastLookX, t.clientY - lastLookY, 0.0032);
+        lastLookX = t.clientX; lastLookY = t.clientY;
+      }
+    }
+    e.preventDefault();
+  }, { passive: false });
+  lookZone.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null;
+  });
+  lookZone.addEventListener("touchcancel", () => { lookTouchId = null; });
+
+  const fireBtn = document.getElementById("fireBtn");
+  fireBtn.addEventListener("touchstart", (e) => { mouseDown = true; fireBtn.classList.add("active"); e.preventDefault(); }, { passive: false });
+  fireBtn.addEventListener("touchend", (e) => { mouseDown = false; fireBtn.classList.remove("active"); e.preventDefault(); }, { passive: false });
+  fireBtn.addEventListener("touchcancel", () => { mouseDown = false; fireBtn.classList.remove("active"); });
+
+  const jumpBtn = document.getElementById("jumpBtn");
+  jumpBtn.addEventListener("touchstart", (e) => { keys.Space = true; e.preventDefault(); }, { passive: false });
+  jumpBtn.addEventListener("touchend", (e) => { keys.Space = false; e.preventDefault(); }, { passive: false });
+
+  const reloadBtn = document.getElementById("reloadBtn");
+  reloadBtn.addEventListener("touchstart", (e) => { requestReload(); e.preventDefault(); }, { passive: false });
+}
 
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement !== canvas && gameState === "playing") {
@@ -1039,13 +1203,15 @@ function updatePlayer(dt) {
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
 
-  let moveX = 0, moveZ = 0;
+  let moveX = touchMoveX, moveZ = touchMoveZ;
   if (keys.KeyW) moveZ -= 1;
   if (keys.KeyS) moveZ += 1;
   if (keys.KeyA) moveX -= 1;
   if (keys.KeyD) moveX += 1;
+  moveX = Math.max(-1, Math.min(1, moveX));
+  moveZ = Math.max(-1, Math.min(1, moveZ));
 
-  const moving = moveX !== 0 || moveZ !== 0;
+  const moving = Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05;
   player.sprinting = moving && keys.ShiftLeft && !player.reloading;
   const speed = player.sprinting ? 7.2 : 4.4;
 
@@ -1346,13 +1512,17 @@ document.getElementById("sensSlider").addEventListener("input", (e) => {
   document.getElementById("sensVal").textContent = sensitivity.toFixed(1);
 });
 
+function lockPointer() {
+  if (!isTouch) canvas.requestPointerLock();
+}
+
 document.getElementById("playBtn").addEventListener("click", () => {
   ensureAudio();
-  canvas.requestPointerLock();
+  lockPointer();
   beginGame();
 });
 document.getElementById("resumeBtn").addEventListener("click", () => {
-  canvas.requestPointerLock();
+  if (isTouch) togglePause(false); else lockPointer();
 });
 document.getElementById("quitBtn").addEventListener("click", () => {
   resetGame();
@@ -1362,12 +1532,13 @@ document.getElementById("quitBtn").addEventListener("click", () => {
   startScreen.classList.remove("hidden");
 });
 document.getElementById("restartBtn").addEventListener("click", () => {
+  ensureAudio();
   gameOverScreen.classList.add("hidden");
   beginGame();
-  canvas.requestPointerLock();
+  lockPointer();
 });
 canvas.addEventListener("click", () => {
-  if (gameState === "playing" && document.pointerLockElement !== canvas) {
+  if (gameState === "playing" && !isTouch && document.pointerLockElement !== canvas) {
     canvas.requestPointerLock();
   }
 });
