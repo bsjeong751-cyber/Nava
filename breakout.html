@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nava Breakout</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #22c55e;
+    --accent-2: #16a34a;
+    --danger: #ef4444;
+    --paddle: #38bdf8;
+    --ball: #f8fafc;
+    --line: rgba(148,163,184,0.2);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(circle at top, #1e2a47 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 480px;
+    padding: 18px 14px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+  .hud {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .hud-box {
+    flex: 1;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+  .hud-box .label {
+    display: block;
+    font-size: 0.62rem;
+    color: var(--muted);
+  }
+  .hud-box .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .board-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+  }
+  #board {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #0b1224;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), inset 0 0 0 2px var(--line);
+    touch-action: none;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.82);
+    border-radius: 14px;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.2s ease;
+    text-align: center;
+    padding: 16px;
+  }
+  .overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .overlay-card h2 {
+    margin: 0 0 8px;
+    color: var(--accent);
+  }
+  .overlay-card p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .overlay-card button {
+    background: var(--accent);
+    color: #052e16;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  .overlay-card button:hover {
+    background: var(--accent-2);
+  }
+  .controls {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  .ctrl-btn {
+    flex: 1;
+    max-width: 140px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .ctrl-btn:hover {
+    border-color: var(--paddle);
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: center;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f1f5f9;
+      --panel: #ffffff;
+      --line: rgba(15,23,42,0.12);
+      --text: #0f172a;
+      --muted: #475569;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>🧱 Nava Breakout</h1>
+
+    <div class="hud">
+      <div class="hud-box">
+        <span class="label">점수</span>
+        <span class="value" id="score">0</span>
+      </div>
+      <div class="hud-box">
+        <span class="label">레벨</span>
+        <span class="value" id="level">1</span>
+      </div>
+      <div class="hud-box">
+        <span class="label">라이프</span>
+        <span class="value" id="lives">3</span>
+      </div>
+      <div class="hud-box">
+        <span class="label">최고점수</span>
+        <span class="value" id="highScore">0</span>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="360" height="480"></canvas>
+      <div id="overlay" class="overlay">
+        <div class="overlay-card">
+          <h2 id="overlayTitle">Nava Breakout</h2>
+          <p id="overlayMsg">
+            마우스/터치/화살표로 패들을 움직이세요.<br>
+            공이 패들 어디에 맞는지에 따라 반사 각도가 달라집니다.<br>
+            파워업(⬇)을 받아보세요: 패들 확장, 멀티볼, 추가 라이프.
+          </p>
+          <button id="startBtn">시작하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn" id="pauseBtn">일시정지</button>
+      <button class="ctrl-btn" id="restartBtn">다시 시작</button>
+    </div>
+    <p class="hint">키보드 ← → / 마우스 이동 / 스와이프, Space로 일시정지</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const levelEl = document.getElementById("level");
+    const livesEl = document.getElementById("lives");
+    const highScoreEl = document.getElementById("highScore");
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const overlayMsg = document.getElementById("overlayMsg");
+    const startBtn = document.getElementById("startBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const HIGH_SCORE_KEY = "nava-breakout-high-score";
+
+    const BRICK_ROWS_BASE = 4;
+    const BRICK_COLS = 7;
+    const BRICK_W = W / BRICK_COLS;
+    const BRICK_H = 20;
+    const BRICK_TOP = 40;
+    const BRICK_GAP = 3;
+    const ROW_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#38bdf8", "#a855f7"];
+
+    const PADDLE_H = 12;
+    const PADDLE_W_BASE = 70;
+    const BALL_R = 6;
+
+    let level, score, lives, bricks, paddle, balls, powerUps, running, paused, animId, highScore;
+
+    function loadHighScore() {
+      return Number(localStorage.getItem(HIGH_SCORE_KEY) || 0);
+    }
+    function saveHighScore(v) {
+      localStorage.setItem(HIGH_SCORE_KEY, String(v));
+    }
+
+    function buildBricks(lvl) {
+      const rows = Math.min(BRICK_ROWS_BASE + Math.floor((lvl - 1) / 2), 8);
+      const arr = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < BRICK_COLS; c++) {
+          const hp = r < 2 ? 1 : (r < rows - 1 ? 1 : 2);
+          arr.push({
+            x: c * BRICK_W + BRICK_GAP / 2,
+            y: BRICK_TOP + r * (BRICK_H + BRICK_GAP),
+            w: BRICK_W - BRICK_GAP,
+            h: BRICK_H,
+            hp,
+            maxHp: hp,
+            color: ROW_COLORS[r % ROW_COLORS.length],
+            alive: true,
+          });
+        }
+      }
+      return arr;
+    }
+
+    function newPaddle() {
+      return {
+        w: PADDLE_W_BASE,
+        h: PADDLE_H,
+        x: W / 2 - PADDLE_W_BASE / 2,
+        y: H - 26,
+        speed: 7,
+        wideUntil: 0,
+      };
+    }
+
+    function newBall(vx = 3.2, vy = -4.2) {
+      return {
+        x: W / 2,
+        y: H - 40,
+        r: BALL_R,
+        vx,
+        vy,
+        stuck: true,
+      };
+    }
+
+    function resetGame(nextLevel = 1, keepScore = false) {
+      level = nextLevel;
+      if (!keepScore) score = 0;
+      lives = 3;
+      bricks = buildBricks(level);
+      paddle = newPaddle();
+      balls = [newBall()];
+      powerUps = [];
+      updateHud();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      levelEl.textContent = level;
+      livesEl.textContent = lives;
+      highScore = loadHighScore();
+      highScoreEl.textContent = highScore;
+    }
+
+    function showOverlay(title, msg, btnText) {
+      overlayTitle.textContent = title;
+      overlayMsg.innerHTML = msg;
+      startBtn.textContent = btnText;
+      overlay.classList.remove("hidden");
+    }
+    function hideOverlay() {
+      overlay.classList.add("hidden");
+    }
+
+    function launchBalls() {
+      balls.forEach((b) => {
+        if (b.stuck) {
+          b.stuck = false;
+          const angle = (-60 - Math.random() * 60) * (Math.PI / 180);
+          const speed = 5.4 + level * 0.15;
+          b.vx = speed * Math.cos(angle);
+          b.vy = speed * Math.sin(angle);
+        }
+      });
+    }
+
+    function startGame() {
+      resetGame(1, false);
+      running = true;
+      paused = false;
+      pauseBtn.textContent = "일시정지";
+      hideOverlay();
+      launchBalls();
+      cancelAnimationFrame(animId);
+      loop();
+    }
+
+    function nextLevel() {
+      running = false;
+      cancelAnimationFrame(animId);
+      showOverlay(
+        `레벨 ${level} 클리어! 🎉`,
+        `점수: <strong>${score}</strong><br>다음 레벨에서는 공이 더 빨라지고 벽돌이 늘어납니다.`,
+        "다음 레벨"
+      );
+      startBtn.onclick = () => {
+        resetGame(level + 1, true);
+        running = true;
+        hideOverlay();
+        launchBalls();
+        cancelAnimationFrame(animId);
+        loop();
+        startBtn.onclick = startGame;
+      };
+    }
+
+    function gameOver(win) {
+      running = false;
+      cancelAnimationFrame(animId);
+      if (score > loadHighScore()) saveHighScore(score);
+      updateHud();
+      showOverlay(
+        win ? "축하합니다! 🏆" : "게임 오버 💀",
+        `점수: <strong>${score}</strong><br>최고점수: <strong>${loadHighScore()}</strong>`,
+        "다시 시작"
+      );
+      startBtn.onclick = startGame;
+    }
+
+    function spawnPowerUp(x, y) {
+      if (Math.random() > 0.22) return;
+      const types = ["wide", "multi", "life"];
+      const type = types[Math.floor(Math.random() * types.length)];
+      powerUps.push({ x, y, w: 22, h: 22, vy: 2.2, type });
+    }
+
+    function applyPowerUp(type) {
+      if (type === "wide") {
+        paddle.w = PADDLE_W_BASE * 1.6;
+        paddle.wideUntil = performance.now() + 9000;
+      } else if (type === "multi") {
+        const base = balls[0];
+        if (base) {
+          for (const ang of [-0.4, 0.4]) {
+            const nb = newBall();
+            nb.stuck = false;
+            nb.x = base.x;
+            nb.y = base.y;
+            const speed = Math.hypot(base.vx, base.vy) || 5.5;
+            const baseAngle = Math.atan2(base.vy, base.vx) + ang;
+            nb.vx = speed * Math.cos(baseAngle);
+            nb.vy = speed * Math.sin(baseAngle);
+            balls.push(nb);
+          }
+        }
+      } else if (type === "life") {
+        lives++;
+      }
+    }
+
+    function update() {
+      if (paddle.wideUntil && performance.now() > paddle.wideUntil) {
+        paddle.w = PADDLE_W_BASE;
+        paddle.wideUntil = 0;
+      }
+
+      balls.forEach((ball) => {
+        if (ball.stuck) {
+          ball.x = paddle.x + paddle.w / 2;
+          ball.y = paddle.y - ball.r - 1;
+          return;
+        }
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx *= -1; }
+        if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.vx *= -1; }
+        if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy *= -1; }
+
+        if (
+          ball.vy > 0 &&
+          ball.y + ball.r >= paddle.y &&
+          ball.y + ball.r <= paddle.y + paddle.h + 8 &&
+          ball.x >= paddle.x - ball.r &&
+          ball.x <= paddle.x + paddle.w + ball.r
+        ) {
+          const hitPos = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+          const speed = Math.min(Math.hypot(ball.vx, ball.vy) * 1.02, 11);
+          const angle = hitPos * (Math.PI / 3);
+          ball.vx = speed * Math.sin(angle);
+          ball.vy = -Math.abs(speed * Math.cos(angle));
+          ball.y = paddle.y - ball.r - 1;
+        }
+
+        for (const brick of bricks) {
+          if (!brick.alive) continue;
+          if (
+            ball.x + ball.r > brick.x &&
+            ball.x - ball.r < brick.x + brick.w &&
+            ball.y + ball.r > brick.y &&
+            ball.y - ball.r < brick.y + brick.h
+          ) {
+            const overlapX = Math.min(ball.x + ball.r - brick.x, brick.x + brick.w - (ball.x - ball.r));
+            const overlapY = Math.min(ball.y + ball.r - brick.y, brick.y + brick.h - (ball.y - ball.r));
+            if (overlapX < overlapY) ball.vx *= -1; else ball.vy *= -1;
+
+            brick.hp--;
+            if (brick.hp <= 0) {
+              brick.alive = false;
+              score += 10 * (brick.maxHp);
+              spawnPowerUp(brick.x + brick.w / 2 - 11, brick.y);
+            } else {
+              score += 3;
+            }
+            updateHud();
+            break;
+          }
+        }
+      });
+
+      balls = balls.filter((b) => b.y - b.r <= H);
+      if (balls.length === 0) {
+        lives--;
+        updateHud();
+        if (lives <= 0) {
+          gameOver(false);
+          return;
+        }
+        balls = [newBall()];
+      }
+
+      powerUps.forEach((p) => (p.y += p.vy));
+      powerUps = powerUps.filter((p) => {
+        if (
+          p.y + p.h >= paddle.y &&
+          p.y <= paddle.y + paddle.h &&
+          p.x + p.w >= paddle.x &&
+          p.x <= paddle.x + paddle.w
+        ) {
+          applyPowerUp(p.type);
+          updateHud();
+          return false;
+        }
+        return p.y <= H;
+      });
+
+      if (bricks.every((b) => !b.alive)) {
+        if (level >= 8) {
+          gameOver(true);
+        } else {
+          nextLevel();
+        }
+      }
+    }
+
+    function drawRoundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      bricks.forEach((b) => {
+        if (!b.alive) return;
+        ctx.globalAlpha = b.hp < b.maxHp ? 0.6 : 1;
+        ctx.fillStyle = b.color;
+        drawRoundRect(b.x, b.y, b.w, b.h, 4);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      ctx.fillStyle = "#38bdf8";
+      drawRoundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+      ctx.fill();
+
+      ctx.fillStyle = "#f8fafc";
+      balls.forEach((ball) => {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      powerUps.forEach((p) => {
+        const colors = { wide: "#38bdf8", multi: "#a855f7", life: "#22c55e" };
+        ctx.fillStyle = colors[p.type];
+        drawRoundRect(p.x, p.y, p.w, p.h, 5);
+        ctx.fill();
+        ctx.fillStyle = "#0b1224";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const glyph = { wide: "W", multi: "M", life: "+" }[p.type];
+        ctx.fillText(glyph, p.x + p.w / 2, p.y + p.h / 2 + 1);
+      });
+    }
+
+    function loop() {
+      if (!running) return;
+      if (!paused) {
+        update();
+        draw();
+      }
+      animId = requestAnimationFrame(loop);
+    }
+
+    function togglePause() {
+      if (!running) return;
+      paused = !paused;
+      pauseBtn.textContent = paused ? "재개" : "일시정지";
+    }
+
+    function movePaddleTo(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const scale = W / rect.width;
+      const x = (clientX - rect.left) * scale - paddle.w / 2;
+      paddle.x = Math.max(0, Math.min(W - paddle.w, x));
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!running) return;
+      movePaddleTo(e.clientX);
+    });
+    canvas.addEventListener("touchmove", (e) => {
+      if (!running) return;
+      movePaddleTo(e.touches[0].clientX);
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener("touchstart", () => {
+      if (!running) startGame(); else launchBalls();
+    });
+    canvas.addEventListener("click", () => {
+      if (!running) startGame(); else launchBalls();
+    });
+
+    const keys = {};
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+      keys[e.key] = true;
+      if (e.key === " ") togglePause();
+      if (!running && e.key !== " ") startGame();
+      if (e.key === "ArrowUp" || e.key === "Enter") launchBalls();
+    });
+    document.addEventListener("keyup", (e) => (keys[e.key] = false));
+
+    function keyboardTick() {
+      if (running && !paused) {
+        if (keys.ArrowLeft) paddle.x = Math.max(0, paddle.x - paddle.speed);
+        if (keys.ArrowRight) paddle.x = Math.min(W - paddle.w, paddle.x + paddle.speed);
+      }
+      requestAnimationFrame(keyboardTick);
+    }
+    keyboardTick();
+
+    startBtn.addEventListener("click", startGame);
+    pauseBtn.addEventListener("click", togglePause);
+    restartBtn.addEventListener("click", () => {
+      running = false;
+      cancelAnimationFrame(animId);
+      startBtn.onclick = startGame;
+      showOverlay("Nava Breakout", "다시 시작할 준비가 되면 버튼을 누르세요.", "시작하기");
+    });
+
+    resetGame(1, false);
+    draw();
+    updateHud();
+  </script>
+</body>
+</html>
