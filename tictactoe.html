@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nava 틱택토</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --line: rgba(148,163,184,0.25);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --x-color: #22c55e;
+    --o-color: #f97316;
+    --win: rgba(34,197,94,0.25);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(circle at top, #1e2a47 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 380px;
+    padding: 24px 16px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+  .status {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-size: 0.95rem;
+    min-height: 1.3em;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+  .cell {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-size: 2.4rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text);
+    user-select: none;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .cell:active {
+    transform: scale(0.96);
+  }
+  .cell.x { color: var(--x-color); }
+  .cell.o { color: var(--o-color); }
+  .cell.win { background: var(--win); }
+  .scoreboard {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+  .score-box {
+    flex: 1;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .score-box .label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .score-box .value {
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .score-box.x .value { color: var(--x-color); }
+  .score-box.o .value { color: var(--o-color); }
+  .controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+  button.action {
+    flex: 1;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button.action:hover {
+    border-color: var(--x-color);
+  }
+  label.mode {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f1f5f9;
+      --panel: #ffffff;
+      --line: rgba(15,23,42,0.12);
+      --text: #0f172a;
+      --muted: #475569;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <h1>⭕ Nava 틱택토 ❌</h1>
+
+    <label class="mode">
+      <input type="checkbox" id="vsCpu" checked>
+      컴퓨터와 대결 (O)
+    </label>
+
+    <div class="scoreboard">
+      <div class="score-box x">
+        <span class="label">X 승</span>
+        <span class="value" id="scoreX">0</span>
+      </div>
+      <div class="score-box">
+        <span class="label">무승부</span>
+        <span class="value" id="scoreDraw">0</span>
+      </div>
+      <div class="score-box o">
+        <span class="label">O 승</span>
+        <span class="value" id="scoreO">0</span>
+      </div>
+    </div>
+
+    <div class="status" id="status">X 차례입니다</div>
+
+    <div class="board" id="board"></div>
+
+    <div class="controls">
+      <button class="action" id="resetBtn">새 게임</button>
+      <button class="action" id="resetScoreBtn">점수 초기화</button>
+    </div>
+  </div>
+
+  <script>
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const vsCpuEl = document.getElementById("vsCpu");
+    const scoreXEl = document.getElementById("scoreX");
+    const scoreOEl = document.getElementById("scoreO");
+    const scoreDrawEl = document.getElementById("scoreDraw");
+
+    const WIN_LINES = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6],
+    ];
+
+    let cells = Array(9).fill(null);
+    let current = "X";
+    let over = false;
+    let scores = { X: 0, O: 0, draw: 0 };
+
+    function render() {
+      boardEl.innerHTML = "";
+      cells.forEach((val, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "cell" + (val ? " " + val.toLowerCase() : "");
+        btn.textContent = val || "";
+        btn.addEventListener("click", () => handleMove(idx));
+        boardEl.appendChild(btn);
+      });
+    }
+
+    function checkWinner(state) {
+      for (const line of WIN_LINES) {
+        const [a, b, c] = line;
+        if (state[a] && state[a] === state[b] && state[a] === state[c]) {
+          return { winner: state[a], line };
+        }
+      }
+      if (state.every((v) => v)) return { winner: "draw", line: [] };
+      return null;
+    }
+
+    function handleMove(idx) {
+      if (over || cells[idx]) return;
+      cells[idx] = current;
+      const result = checkWinner(cells);
+      if (result) {
+        finish(result);
+        return;
+      }
+      current = current === "X" ? "O" : "X";
+      render();
+      updateStatus();
+
+      if (!over && vsCpuEl.checked && current === "O") {
+        setTimeout(cpuMove, 350);
+      }
+    }
+
+    function cpuMove() {
+      if (over) return;
+      const idx = pickCpuMove();
+      if (idx === -1) return;
+      cells[idx] = "O";
+      const result = checkWinner(cells);
+      if (result) {
+        finish(result);
+        return;
+      }
+      current = "X";
+      render();
+      updateStatus();
+    }
+
+    function pickCpuMove() {
+      const empty = cells.map((v, i) => (v ? -1 : i)).filter((i) => i !== -1);
+      if (empty.length === 0) return -1;
+
+      for (const idx of empty) {
+        const trial = [...cells];
+        trial[idx] = "O";
+        if (checkWinner(trial)?.winner === "O") return idx;
+      }
+      for (const idx of empty) {
+        const trial = [...cells];
+        trial[idx] = "X";
+        if (checkWinner(trial)?.winner === "X") return idx;
+      }
+      if (cells[4] === null) return 4;
+      const corners = [0, 2, 6, 8].filter((i) => cells[i] === null);
+      if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function finish(result) {
+      over = true;
+      render();
+      if (result.winner === "draw") {
+        scores.draw++;
+        statusEl.textContent = "무승부입니다";
+      } else {
+        scores[result.winner]++;
+        statusEl.textContent = `${result.winner} 승리! 🎉`;
+        result.line.forEach((idx) => {
+          boardEl.children[idx].classList.add("win");
+        });
+      }
+      updateScoreboard();
+    }
+
+    function updateStatus() {
+      if (!over) statusEl.textContent = `${current} 차례입니다`;
+    }
+
+    function updateScoreboard() {
+      scoreXEl.textContent = scores.X;
+      scoreOEl.textContent = scores.O;
+      scoreDrawEl.textContent = scores.draw;
+    }
+
+    function newGame() {
+      cells = Array(9).fill(null);
+      current = "X";
+      over = false;
+      render();
+      updateStatus();
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", newGame);
+    document.getElementById("resetScoreBtn").addEventListener("click", () => {
+      scores = { X: 0, O: 0, draw: 0 };
+      updateScoreboard();
+    });
+    vsCpuEl.addEventListener("change", newGame);
+
+    newGame();
+    updateScoreboard();
+  </script>
+</body>
+</html>
