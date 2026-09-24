@@ -5,139 +5,119 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>링크의 모험</title>
 <style>
-  :root {
-    --bg: #87ceeb;
-    --panel: rgba(15, 20, 30, 0.92);
-    --text: #e5e7eb;
-    --muted: #94a3b8;
-  }
-  * { box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    margin: 0;
     width: 100%;
     height: 100%;
+    background: #87ceeb;
+    font-family: Arial, sans-serif;
     overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", sans-serif;
   }
   canvas { display: block; }
 
-  #hud {
+  #ui {
     position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-  }
-  #hud.active { opacity: 1; }
-
-  .hud-panel {
-    position: absolute;
-    background: var(--panel);
-    border: 1px solid rgba(148,163,184,0.25);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-  }
-
-  #healthWrap {
-    left: 16px;
-    bottom: 16px;
-    width: 200px;
-  }
-  #healthBarFg {
-    height: 8px;
+    top: 0;
+    left: 0;
     width: 100%;
-    background: linear-gradient(90deg, #22c55e, #4ade80);
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .panel {
+    position: absolute;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  #health { left: 10px; bottom: 10px; width: 200px; }
+  #health .bar {
+    width: 100%;
+    height: 20px;
+    background: #333;
     border-radius: 4px;
-    margin-top: 4px;
+    overflow: hidden;
+    margin-top: 5px;
   }
+  #health .bar-fill { height: 100%; background: #22c55e; transition: width 0.2s; }
 
-  #statsWrap {
-    top: 16px;
-    right: 16px;
-    display: flex;
-    gap: 12px;
-  }
-  #statsWrap div { text-align: center; }
+  #stats { top: 10px; right: 10px; text-align: right; }
 
-  .screen {
+  #menu {
     position: fixed;
     inset: 0;
+    background: rgba(0,0,0,0.8);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at top, #16213a 0%, #05070c 75%);
-    z-index: 10;
-    text-align: center;
-    padding: 20px;
+    color: #fff;
+    z-index: 20;
   }
-  .screen.hidden { display: none; }
+  #menu.hidden { display: none; }
 
   .card {
-    max-width: 420px;
-  }
-  .card h1 {
-    font-size: 2rem;
-    margin: 0 0 10px;
-  }
-  .card p {
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
-  .tips {
-    background: var(--panel);
-    border: 1px solid rgba(148,163,184,0.25);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 20px;
-    font-size: 0.8rem;
-    line-height: 1.6;
+    text-align: center;
+    background: rgba(0,0,0,0.9);
+    padding: 40px;
+    border-radius: 10px;
   }
 
+  .card h1 { font-size: 32px; margin-bottom: 20px; }
+  .card p { margin-bottom: 20px; color: #aaa; }
+  .tips { text-align: left; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; line-height: 1.6; }
+
   button {
-    background: linear-gradient(180deg, #ef4444, #b91c1c);
+    background: #ef4444;
     color: #fff;
     border: none;
-    padding: 12px 32px;
+    padding: 12px 30px;
+    font-size: 16px;
     border-radius: 6px;
-    font-weight: 800;
-    font-size: 1rem;
     cursor: pointer;
+    font-weight: bold;
   }
-  button:hover { filter: brightness(1.08); }
+  button:hover { background: #dc2626; }
 
   #touchUI { display: none; }
   body.touch #touchUI { display: block; }
 
   #joyBase {
     position: fixed;
-    left: 20px; bottom: 80px;
-    width: 100px; height: 100px;
+    left: 20px;
+    bottom: 80px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     background: rgba(255,255,255,0.1);
-    border: 2px solid rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.3);
     z-index: 5;
   }
+
   #joyStick {
     position: absolute;
-    left: 50%; top: 50%;
-    width: 50px; height: 50px;
+    left: 50%;
+    top: 50%;
+    width: 50px;
+    height: 50px;
     margin: -25px 0 0 -25px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.3);
-    border: 2px solid rgba(255,255,255,0.5);
+    background: rgba(255,0,0,0.3);
+    border: 2px solid rgba(255,0,0,0.6);
   }
 
-  .touch-btn {
+  .btn {
     position: fixed;
-    width: 60px; height: 60px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
-    background: rgba(239,68,68,0.4);
-    border: 2px solid rgba(239,68,68,0.7);
+    background: rgba(255,0,0,0.3);
+    border: 2px solid rgba(255,0,0,0.6);
     color: #fff;
-    font-size: 1.8rem;
+    font-size: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -145,60 +125,40 @@
     cursor: pointer;
   }
   #fireBtn { right: 20px; bottom: 80px; }
-  #jumpBtn { right: 20px; bottom: 160px; }
+  #jumpBtn { right: 20px; bottom: 170px; }
 </style>
 </head>
 <body>
   <canvas id="game"></canvas>
 
-  <div id="hud">
-    <div id="healthWrap" class="hud-panel">
-      <div>❤ <span id="healthNum">100</span></div>
-      <div id="healthBarFg"></div>
+  <div id="ui">
+    <div id="health" class="panel">
+      <div>❤ <span id="hp">100</span>/100</div>
+      <div class="bar"><div class="bar-fill" id="hpBar"></div></div>
     </div>
-    <div id="statsWrap" class="hud-panel">
-      <div><div>점수</div><div id="scoreVal">0</div></div>
-      <div><div>웨이브</div><div id="waveVal">1</div></div>
-      <div><div>킬</div><div id="killVal">0</div></div>
+    <div id="stats" class="panel">
+      <div>점수: <span id="score">0</span></div>
+      <div>웨이브: <span id="wave">1</span></div>
+      <div>킬: <span id="kills">0</span></div>
     </div>
   </div>
 
-  <div id="startScreen" class="screen">
+  <div id="menu">
     <div class="card">
       <h1>링크의 모험</h1>
       <p>젤다 스타일 액션 게임</p>
       <div class="tips">
-        <b>WASD</b> 이동 · <b>마우스</b> 카메라<br>
-        <b>클릭</b> 검 공격 · <b>Space</b> 점프<br>
-        <b>ESC</b> 일시정지
+        <b>PC:</b> WASD 이동 · 마우스 카메라 · 클릭 공격<br>
+        <b>모바일:</b> 조이스틱 · 드래그 카메라 · 버튼 공격
       </div>
-      <button id="playBtn">전투 시작</button>
-    </div>
-  </div>
-
-  <div id="pauseScreen" class="screen hidden">
-    <div class="card">
-      <h1>일시정지</h1>
-      <button id="resumeBtn">계속하기</button>
-    </div>
-  </div>
-
-  <div id="gameOverScreen" class="screen hidden">
-    <div class="card">
-      <h1>전사했습니다 💀</h1>
-      <div style="margin: 20px 0;">
-        <div>점수: <strong id="finalScore">0</strong></div>
-        <div>웨이브: <strong id="finalWave">1</strong></div>
-        <div>킬: <strong id="finalKills">0</strong></div>
-      </div>
-      <button id="restartBtn">다시 도전</button>
+      <button onclick="startGame()">전투 시작</button>
     </div>
   </div>
 
   <div id="touchUI">
     <div id="joyBase"><div id="joyStick"></div></div>
-    <div id="fireBtn" class="touch-btn">⚔️</div>
-    <div id="jumpBtn" class="touch-btn">⤒</div>
+    <div id="fireBtn" class="btn">⚔️</div>
+    <div id="jumpBtn" class="btn">⤒</div>
   </div>
 
 <script type="importmap">
@@ -209,13 +169,10 @@ import * as THREE from "three";
 
 const canvas = document.getElementById("game");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setClearColor(0x87ceeb);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
 scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -229,14 +186,13 @@ window.addEventListener("resize", () => {
 
 // 지면
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(100, 100),
+  new THREE.PlaneGeometry(200, 200),
   new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.95 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// 충돌체
 const colliders = [];
 
 function addBox(x, z, w, d, h, color) {
@@ -252,17 +208,16 @@ function addBox(x, z, w, d, h, color) {
 }
 
 // 장애물
-const colors = [0xa0826d, 0xb8956a, 0x9d7e73];
-addBox(-10, -10, 4, 4, 2.5, colors[0]);
-addBox(10, -10, 4, 4, 2.5, colors[1]);
-addBox(0, 5, 4, 4, 2.5, colors[2]);
-addBox(-15, 10, 5, 3, 2.5, colors[0]);
-addBox(15, 10, 5, 3, 2.5, colors[1]);
+addBox(-10, -10, 4, 4, 2.5, 0xa0826d);
+addBox(10, -10, 4, 4, 2.5, 0xb8956a);
+addBox(0, 5, 4, 4, 2.5, 0x9d7e73);
+addBox(-15, 10, 5, 3, 2.5, 0xa0826d);
+addBox(15, 10, 5, 3, 2.5, 0xb8956a);
 
 // 라이팅
 scene.add(new THREE.HemisphereLight(0x87ceeb, 0x90ee90, 1.2));
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const sun = new THREE.DirectionalLight(0xfff8dc, 2.0);
+const sun = new THREE.DirectionalLight(0xfff8dc, 2);
 sun.position.set(20, 32, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -272,34 +227,29 @@ sun.shadow.camera.top = 50;
 sun.shadow.camera.bottom = -50;
 scene.add(sun);
 
-// 플레이어 그룹
+// 플레이어
 const playerGroup = new THREE.Group();
 scene.add(playerGroup);
 
-const linkGreen = new THREE.MeshStandardMaterial({ color: 0x2d5016 });
-const linkSkin = new THREE.MeshStandardMaterial({ color: 0xf4a460 });
-const linkBlonde = new THREE.MeshStandardMaterial({ color: 0xffd700 });
-
-const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.25), linkGreen);
+const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.25), new THREE.MeshStandardMaterial({ color: 0x2d5016 }));
 torso.position.y = 0.8;
 torso.castShadow = true;
 playerGroup.add(torso);
 
-const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), linkSkin);
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), new THREE.MeshStandardMaterial({ color: 0xf4a460 }));
 head.position.y = 1.5;
 head.castShadow = true;
 playerGroup.add(head);
 
-const hair = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.25, 0.38), linkBlonde);
+const hair = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.25, 0.38), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
 hair.position.y = 1.7;
 hair.castShadow = true;
 playerGroup.add(hair);
 
-// 검
 const sword = new THREE.Group();
-const swordBlade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 }));
-swordBlade.position.y = 0.3;
-sword.add(swordBlade);
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 }));
+blade.position.y = 0.3;
+sword.add(blade);
 sword.position.set(0.2, 0.8, -0.3);
 playerGroup.add(sword);
 
@@ -312,22 +262,19 @@ const player = {
   onGround: true,
   health: 100,
   maxHealth: 100,
-  power: 100,
-  maxPower: 100,
   lastFire: 0,
   lastDamage: -99,
 };
 
 const enemies = [];
-const dyingEnemies = [];
+let score = 0, kills = 0, waveNum = 1;
+let gameRunning = false;
 
 function makeHealthBar() {
   const group = new THREE.Group();
-  const bg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x111827, transparent: true }));
-  bg.scale.set(0.9, 0.12, 1);
   const fg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x22c55e }));
   fg.scale.set(0.9, 0.09, 1);
-  group.add(bg, fg);
+  group.add(fg);
   group.userData.fg = fg;
   return group;
 }
@@ -365,38 +312,93 @@ function spawnEnemy(type) {
   return enemy;
 }
 
-function killEnemy(enemy) {
-  enemy.alive = false;
-  const idx = enemies.indexOf(enemy);
+function killEnemy(e) {
+  e.alive = false;
+  const idx = enemies.indexOf(e);
   if (idx >= 0) enemies.splice(idx, 1);
-  scene.remove(enemy.group);
-  scene.remove(enemy.bar);
+  scene.remove(e.group);
+  scene.remove(e.bar);
 }
 
-let score = 0, kills = 0, waveNumber = 1;
-let gameState = "menu";
+const keys = {};
+window.addEventListener("keydown", (e) => { keys[e.code] = true; });
+window.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
-function updatePlayer(dt) {
-  const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+let mouseDown = false;
+canvas.addEventListener("mousedown", () => { mouseDown = true; });
+canvas.addEventListener("mouseup", () => { mouseDown = false; });
 
-  let moveZ = 0, moveX = 0;
-  if (keys.KeyW) moveZ -= 1;
-  if (keys.KeyS) moveZ += 1;
-  if (keys.KeyA) moveX -= 1;
-  if (keys.KeyD) moveX += 1;
+document.addEventListener("mousemove", (e) => {
+  if (document.pointerLockElement !== canvas) return;
+  player.yaw -= e.movementX * 0.0022;
+  player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch - e.movementY * 0.0022));
+});
 
-  // 터치 이동 추가
-  moveX += touchMoveX;
-  moveZ += touchMoveZ;
+// 터치 지원
+const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+let touchMoveX = 0, touchMoveZ = 0;
 
-  const speed = 4.4;
-  const wish = new THREE.Vector3();
-  if (moveX || moveZ) {
-    wish.addScaledVector(forward, -moveZ).addScaledVector(right, moveX);
-    wish.normalize().multiplyScalar(speed);
+if (isTouch) {
+  document.body.classList.add("touch");
+  const joyBase = document.getElementById("joyBase");
+  const joyStick = document.getElementById("joyStick");
+  const fireBtn = document.getElementById("fireBtn");
+  const jumpBtn = document.getElementById("jumpBtn");
+
+  let joyId = null;
+  let lastX = 0, lastY = 0;
+
+  function getJoyCenter() {
+    const r = joyBase.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }
 
+  joyBase.addEventListener("touchstart", (e) => { joyId = e.touches[0].identifier; }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    for (const t of e.touches) {
+      if (t.identifier === joyId) {
+        const c = getJoyCenter();
+        let dx = t.clientX - c.x, dy = t.clientY - c.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 40) { dx = (dx / dist) * 40; dy = (dy / dist) * 40; }
+        joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+        touchMoveX = dx / 50;
+        touchMoveZ = dy / 50;
+      }
+      if (t.clientX > window.innerWidth / 2 && gameRunning) {
+        player.yaw -= (t.clientX - lastX) * 0.005;
+        player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch - (t.clientY - lastY) * 0.005));
+        lastX = t.clientX;
+        lastY = t.clientY;
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) { joyId = null; touchMoveX = 0; touchMoveZ = 0; joyStick.style.transform = ""; }
+    }
+  });
+
+  fireBtn.addEventListener("touchstart", () => { mouseDown = true; }, { passive: true });
+  fireBtn.addEventListener("touchend", () => { mouseDown = false; });
+  jumpBtn.addEventListener("touchstart", () => { keys.Space = true; }, { passive: true });
+  jumpBtn.addEventListener("touchend", () => { keys.Space = false; });
+}
+
+function updatePlayer(dt) {
+  const fw = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  const rg = new THREE.Vector3(-fw.z, 0, fw.x);
+
+  let mx = touchMoveX, mz = touchMoveZ;
+  if (keys.KeyW) mz -= 1;
+  if (keys.KeyS) mz += 1;
+  if (keys.KeyA) mx -= 1;
+  if (keys.KeyD) mx += 1;
+
+  const wish = new THREE.Vector3();
+  if (mx || mz) wish.addScaledVector(fw, -mz).addScaledVector(rg, mx).normalize().multiplyScalar(4.4);
   player.vel.x += (wish.x - player.vel.x) * 0.2;
   player.vel.z += (wish.z - player.vel.z) * 0.2;
 
@@ -406,302 +408,120 @@ function updatePlayer(dt) {
 
   for (const c of colliders) {
     const dx = next.x - c.cx, dz = next.z - c.cz;
-    const halfW = c.hx + 0.45, halfD = c.hz + 0.45;
-    if (Math.abs(dx) < halfW && Math.abs(dz) < halfD) {
-      const overlapX = halfW - Math.abs(dx);
-      const overlapZ = halfD - Math.abs(dz);
-      if (overlapX < overlapZ) next.x += Math.sign(dx || 1) * overlapX;
-      else next.z += Math.sign(dz || 1) * overlapZ;
+    const hw = c.hx + 0.45, hd = c.hz + 0.45;
+    if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
+      const ox = hw - Math.abs(dx), oz = hd - Math.abs(dz);
+      if (ox < oz) next.x += Math.sign(dx || 1) * ox;
+      else next.z += Math.sign(dz || 1) * oz;
     }
   }
 
   const lim = 50 - 0.45;
   next.x = Math.max(-lim, Math.min(lim, next.x));
   next.z = Math.max(-lim, Math.min(lim, next.z));
-
   player.pos.copy(next);
 
-  if (keys.Space && player.onGround) {
-    player.vy = 5.4;
-    player.onGround = false;
-  }
+  if (keys.Space && player.onGround) { player.vy = 5.4; player.onGround = false; }
   player.vy -= 15.5 * dt;
   player.pos.y += player.vy * dt;
   if (player.pos.y <= 0) { player.pos.y = 0; player.vy = 0; player.onGround = true; }
 
-  if (performance.now() - player.lastDamage > 4200 && player.health < player.maxHealth) {
-    player.health = Math.min(player.maxHealth, player.health + 9 * dt);
-  }
-
-  if (player.power < player.maxPower) {
-    player.power = Math.min(player.maxPower, player.power + 35 * dt);
-  }
+  if (performance.now() - player.lastDamage > 4200 && player.health < 100) player.health += 9 * dt;
 
   playerGroup.position.copy(player.pos);
   playerGroup.rotation.y = player.yaw;
-
-  const camDist = 4, camHeight = 1.8;
-  camera.position.set(
-    player.pos.x - Math.sin(player.yaw) * camDist,
-    player.pos.y + camHeight,
-    player.pos.z - Math.cos(player.yaw) * camDist
-  );
+  camera.position.set(player.pos.x - Math.sin(player.yaw) * 4, player.pos.y + 1.8, player.pos.z - Math.cos(player.yaw) * 4);
   camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 }
 
 function updateEnemies(dt) {
-  for (const enemy of enemies) {
-    const ePos = enemy.group.position;
-    const dx = player.pos.x - ePos.x, dz = player.pos.z - ePos.z;
+  for (const e of enemies) {
+    const dx = player.pos.x - e.group.position.x, dz = player.pos.z - e.group.position.z;
     const dist = Math.hypot(dx, dz);
-
-    enemy.group.rotation.y = Math.atan2(dx, dz);
-
-    if (dist > enemy.attackRange && dist > 1) {
+    e.group.rotation.y = Math.atan2(dx, dz);
+    if (dist > e.attackRange && dist > 1) {
       const dir = new THREE.Vector3(dx, 0, dz).normalize();
-      ePos.x += dir.x * enemy.speed * dt;
-      ePos.z += dir.z * enemy.speed * dt;
+      e.group.position.x += dir.x * e.speed * dt;
+      e.group.position.z += dir.z * e.speed * dt;
     }
+    e.bar.position.set(e.group.position.x, e.group.position.y + 2, e.group.position.z);
 
-    enemy.bar.position.set(ePos.x, ePos.y + 2, ePos.z);
-
-    const now = performance.now();
-    if (dist <= enemy.attackRange && now - enemy.lastAttack > 1500) {
-      enemy.lastAttack = now;
-      if (dist <= 2) player.health -= enemy.damage;
+    if (dist <= e.attackRange && performance.now() - e.lastAttack > 1500) {
+      e.lastAttack = performance.now();
+      if (dist <= 2) player.health -= e.damage;
     }
   }
 }
 
-function tryFire() {
-  const now = performance.now();
-  if (gameState !== "playing") return;
-  if (now - player.lastFire < 250) return;
-  if (player.power < 20) return;
-
-  player.lastFire = now;
-  player.power -= 20;
-
-  const swordWorldPos = new THREE.Vector3();
-  sword.getWorldPosition(swordWorldPos);
-
-  for (const enemy of enemies) {
-    const dist = swordWorldPos.distanceTo(enemy.group.position);
-    if (dist < 2.5 && enemy.alive) {
-      const dmg = 25 + Math.random() * 15;
-      enemy.hp -= dmg;
-      score += 15;
-
-      if (enemy.hp <= 0) {
-        killEnemy(enemy);
-        kills++;
-        score += 50;
-      }
-    }
-  }
+function updateUI() {
+  document.getElementById("hp").textContent = Math.ceil(player.health);
+  document.getElementById("hpBar").style.width = (player.health / 100 * 100) + "%";
+  document.getElementById("score").textContent = score;
+  document.getElementById("wave").textContent = waveNum;
+  document.getElementById("kills").textContent = kills;
 }
 
-const keys = {};
-window.addEventListener("keydown", (e) => {
-  keys[e.code] = true;
-  if (e.code === "Escape" && gameState === "playing") {
-    gameState = "paused";
-    document.getElementById("pauseScreen").classList.remove("hidden");
-  }
-});
-window.addEventListener("keyup", (e) => { keys[e.code] = false; });
-
-let mouseDown = false;
-canvas.addEventListener("mousedown", () => { mouseDown = true; });
-window.addEventListener("mouseup", () => { mouseDown = false; });
-
-document.addEventListener("mousemove", (e) => {
-  if (document.pointerLockElement !== canvas) return;
-  player.yaw -= e.movementX * 0.0022;
-  player.pitch -= e.movementY * 0.0022;
-  player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
-});
-
-document.getElementById("playBtn").addEventListener("click", () => {
-  gameState = "playing";
-  document.getElementById("startScreen").classList.add("hidden");
-  document.getElementById("pauseScreen").classList.add("hidden");
-  document.getElementById("hud").classList.add("active");
-  canvas.requestPointerLock();
-
-  if (waveNumber === 1) {
-    score = 0; kills = 0;
-    enemies.forEach(e => killEnemy(e));
-    for (let i = 0; i < 5; i++) {
-      const e = spawnEnemy(i < 2 ? "shooter" : "grunt");
-      e.group.position.set((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60);
-    }
-  }
-});
-
-document.getElementById("resumeBtn").addEventListener("click", () => {
-  gameState = "playing";
-  document.getElementById("pauseScreen").classList.add("hidden");
-  canvas.requestPointerLock();
-});
-
-document.getElementById("restartBtn").addEventListener("click", () => {
-  gameState = "playing";
-  player.health = player.maxHealth;
-  player.power = player.maxPower;
+window.startGame = function() {
+  document.getElementById("menu").classList.add("hidden");
+  gameRunning = true;
   player.pos.set(0, 0, 24);
-  document.getElementById("gameOverScreen").classList.add("hidden");
-  document.getElementById("startScreen").classList.remove("hidden");
-  document.getElementById("hud").classList.remove("active");
-});
-
-// 모바일 터치 지원
-const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
-if (isTouch) {
-  document.body.classList.add("touch");
-
-  const joyZone = document.getElementById("joyBase");
-  const joyStick = document.getElementById("joyStick");
-  const fireBtn = document.getElementById("fireBtn");
-  const jumpBtn = document.getElementById("jumpBtn");
-
-  let joyTouchId = null;
-  let touchMoveX = 0, touchMoveZ = 0;
-
-  function getJoyCenter() {
-    const r = joyZone.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  player.health = 100;
+  score = 0;
+  kills = 0;
+  waveNum = 1;
+  enemies.forEach(e => killEnemy(e));
+  for (let i = 0; i < 5; i++) {
+    const e = spawnEnemy(i < 2 ? "shooter" : "grunt");
+    const a = Math.random() * Math.PI * 2;
+    e.group.position.set(Math.cos(a) * 40, 0, Math.sin(a) * 40);
   }
-
-  joyZone.addEventListener("touchstart", (e) => {
-    if (joyTouchId === null && gameState === "playing") {
-      joyTouchId = e.touches[0].identifier;
-      const t = e.touches[0];
-      const c = getJoyCenter();
-      const dx = t.clientX - c.x, dy = t.clientY - c.y;
-      const dist = Math.hypot(dx, dy);
-      const maxR = 40;
-      if (dist > maxR) {
-        const ratio = maxR / dist;
-        joyStick.style.transform = `translate(${dx * ratio}px, ${dy * ratio}px)`;
-      } else {
-        joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-      }
-      touchMoveX = dx / 50;
-      touchMoveZ = dy / 50;
-    }
-  }, { passive: true });
-
-  document.addEventListener("touchmove", (e) => {
-    if (joyTouchId !== null && gameState === "playing") {
-      for (const t of e.touches) {
-        if (t.identifier === joyTouchId) {
-          const c = getJoyCenter();
-          const dx = t.clientX - c.x, dy = t.clientY - c.y;
-          const dist = Math.hypot(dx, dy);
-          const maxR = 40;
-          if (dist > maxR) {
-            const ratio = maxR / dist;
-            joyStick.style.transform = `translate(${dx * ratio}px, ${dy * ratio}px)`;
-            touchMoveX = (dx * ratio) / 50;
-            touchMoveZ = (dy * ratio) / 50;
-          } else {
-            joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-            touchMoveX = dx / 50;
-            touchMoveZ = dy / 50;
-          }
-        }
-      }
-    }
-
-    // 드래그로 카메라 회전
-    if (gameState === "playing" && e.touches.length === 1) {
-      const t = e.touches[0];
-      if (t.clientX > window.innerWidth / 2) {
-        player.yaw -= (t.clientX - lastTouchX) * 0.005;
-        player.pitch -= (t.clientY - lastTouchY) * 0.005;
-        player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
-      }
-      lastTouchX = t.clientX;
-      lastTouchY = t.clientY;
-    }
-  }, { passive: true });
-
-  document.addEventListener("touchend", (e) => {
-    for (const t of e.changedTouches) {
-      if (t.identifier === joyTouchId) {
-        joyTouchId = null;
-        touchMoveX = 0;
-        touchMoveZ = 0;
-        joyStick.style.transform = "translate(0, 0)";
-      }
-    }
-  });
-
-  fireBtn.addEventListener("touchstart", () => {
-    mouseDown = true;
-    fireBtn.style.opacity = "0.7";
-  });
-  fireBtn.addEventListener("touchend", () => {
-    mouseDown = false;
-    fireBtn.style.opacity = "0.4";
-  });
-
-  jumpBtn.addEventListener("touchstart", () => {
-    keys.Space = true;
-  });
-  jumpBtn.addEventListener("touchend", () => {
-    keys.Space = false;
-  });
-
-  let lastTouchX = 0, lastTouchY = 0;
-}
-
-
-function updateHud() {
-  document.getElementById("healthNum").textContent = Math.ceil(player.health);
-  const hbar = document.querySelector("#healthWrap #healthBarFg");
-  hbar.style.width = (player.health / player.maxHealth * 100) + "%";
-  document.getElementById("scoreVal").textContent = score;
-  document.getElementById("waveVal").textContent = waveNumber;
-  document.getElementById("killVal").textContent = kills;
-}
+  if (!isTouch) canvas.requestPointerLock();
+  updateUI();
+};
 
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (gameState === "playing") {
+  if (gameRunning) {
     updatePlayer(dt);
     updateEnemies(dt);
-    if (mouseDown) tryFire();
-    updateHud();
 
-    if (enemies.length === 0 && gameState === "playing") {
-      waveNumber++;
-      for (let i = 0; i < 4 + waveNumber; i++) {
+    if (mouseDown && performance.now() - player.lastFire > 250) {
+      player.lastFire = performance.now();
+      const swordPos = new THREE.Vector3();
+      sword.getWorldPosition(swordPos);
+      for (const e of enemies) {
+        if (swordPos.distanceTo(e.group.position) < 2.5 && e.alive) {
+          e.hp -= 25 + Math.random() * 15;
+          score += 15;
+          if (e.hp <= 0) { killEnemy(e); kills++; score += 50; }
+        }
+      }
+    }
+
+    if (enemies.length === 0) {
+      waveNum++;
+      for (let i = 0; i < 4 + waveNum; i++) {
         const e = spawnEnemy(Math.random() < 0.4 ? "shooter" : "grunt");
-        const ang = Math.random() * Math.PI * 2;
-        e.group.position.set(Math.cos(ang) * 40, 0, Math.sin(ang) * 40);
+        const a = Math.random() * Math.PI * 2;
+        e.group.position.set(Math.cos(a) * 40, 0, Math.sin(a) * 40);
       }
     }
 
     if (player.health <= 0) {
-      gameState = "over";
-      document.getElementById("hud").classList.remove("active");
-      document.getElementById("gameOverScreen").classList.remove("hidden");
-      document.getElementById("finalScore").textContent = score;
-      document.getElementById("finalWave").textContent = waveNumber;
-      document.getElementById("finalKills").textContent = kills;
+      gameRunning = false;
+      document.getElementById("menu").classList.remove("hidden");
+      document.getElementById("menu").innerHTML = `<div class="card"><h1>패배 💀</h1><p>점수: ${score} | 웨이브: ${waveNum} | 킬: ${kills}</p><button onclick="location.reload()">다시</button></div>`;
     }
+
+    updateUI();
   }
 
   renderer.render(scene, camera);
 }
 animate();
-
-updateHud();
 </script>
 </body>
 </html>
