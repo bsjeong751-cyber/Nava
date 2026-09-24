@@ -464,7 +464,7 @@ function limb(dia, totalLen, mat, pivotY, xOff) {
   const g = new THREE.Group();
   const r = dia / 2;
   const cylLen = Math.max(0.02, totalLen - dia);
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, cylLen, 4, 8), mat);
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, cylLen, 6, 12), mat);
   m.position.y = -totalLen / 2;
   m.castShadow = true;
   g.add(m);
@@ -487,12 +487,12 @@ for (const leg of [legL, legR]) {
 }
 
 // pelvis + torso (rounded, tapered via capsule + scale)
-const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.05, 4, 8), tunicMat);
+const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.05, 6, 12), tunicMat);
 pelvis.position.y = hipY + 0.13;
 pelvis.castShadow = true;
 playerGroup.add(pelvis);
 
-const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.21, 0.26, 4, 8), tunicMat);
+const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.21, 0.26, 6, 12), tunicMat);
 torso.scale.set(1.08, 1, 0.82);
 torso.position.y = hipY + 0.42;
 torso.castShadow = true;
@@ -583,7 +583,7 @@ const swordRestRot = { x: sword.rotation.x, z: sword.rotation.z };
 const player = {
   pos: new THREE.Vector3(0, 0, 22),
   vel: new THREE.Vector3(),
-  yaw: Math.PI, pitch: 0,
+  yaw: Math.PI, pitch: 0, facing: Math.PI,
   vy: 0, onGround: true,
   health: 100, maxHealth: 100,
   power: 100, maxPower: 100,
@@ -790,9 +790,17 @@ if (isTouch) {
   jumpBtn.addEventListener("touchend", () => { keys.Space = false; });
 }
 
+function lerpAngle(a, b, t) {
+  let diff = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+  return a + diff * t;
+}
+
 function updatePlayer(dt) {
+  // player.yaw = camera orbit angle (mouse/touch drag), independent of
+  // which way the character model faces, so the camera can freely swing
+  // around to look at Link's face instead of being locked behind him.
   const fw = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-  const rg = new THREE.Vector3(fw.z, 0, -fw.x);
+  const rg = new THREE.Vector3(-fw.z, 0, fw.x);
 
   let mx = touchMoveX, mz = touchMoveZ;
   if (keys.KeyW) mz -= 1;
@@ -801,7 +809,11 @@ function updatePlayer(dt) {
   if (keys.KeyD) mx += 1;
 
   const wish = new THREE.Vector3();
-  if (mx || mz) wish.addScaledVector(fw, -mz).addScaledVector(rg, mx).normalize().multiplyScalar(4.4);
+  if (mx || mz) {
+    wish.addScaledVector(fw, -mz).addScaledVector(rg, mx).normalize().multiplyScalar(4.4);
+    const targetFacing = Math.atan2(wish.x, wish.z);
+    player.facing = lerpAngle(player.facing, targetFacing, Math.min(1, dt * 12));
+  }
   player.vel.x += (wish.x - player.vel.x) * 0.2;
   player.vel.z += (wish.z - player.vel.z) * 0.2;
 
@@ -833,7 +845,7 @@ function updatePlayer(dt) {
   if (player.power < player.maxPower) player.power = Math.min(player.maxPower, player.power + 35 * dt);
 
   playerGroup.position.copy(player.pos);
-  playerGroup.rotation.y = player.yaw;
+  playerGroup.rotation.y = player.facing;
   camera.position.set(player.pos.x - Math.sin(player.yaw) * 4, player.pos.y + 1.8, player.pos.z - Math.cos(player.yaw) * 4);
   camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
   sun.target.position.copy(player.pos);
