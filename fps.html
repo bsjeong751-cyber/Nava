@@ -161,11 +161,9 @@
     <div id="jumpBtn" class="btn">⤒</div>
   </div>
 
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.module.min.js" } }
-</script>
-<script type="module">
-import * as THREE from "three";
+<script src="./vendor/three.min.js"></script>
+<script>
+const THREE = window.THREE;
 
 const canvas = document.getElementById("game");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
