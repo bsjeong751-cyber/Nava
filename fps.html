@@ -1291,9 +1291,6 @@ function updatePlayer(dt) {
   // 검 회전
   playerGroup.userData.sword.rotation.z = Math.sin(bobTime) * 0.3;
 
-  flashLight.intensity *= Math.max(0, 1 - dt * 22);
-  flashSprite.material.opacity *= Math.max(0, 1 - dt * 20);
-
   // 3인칭 카메라
   playerGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
   playerGroup.rotation.y = player.yaw;
