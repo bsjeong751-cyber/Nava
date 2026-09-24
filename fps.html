@@ -48,21 +48,15 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    line-height: 1;
+    text-align: center;
+    opacity: 0.6;
   }
-  #crosshair::before, #crosshair::after {
-    content: "";
-    position: absolute;
-    background: #f8fafc;
-    box-shadow: 0 0 2px rgba(0,0,0,0.8);
-    transition: background 0.08s ease;
-  }
-  #crosshair::before { left: 9px; top: 0; width: 2px; height: 20px; }
-  #crosshair::after { top: 9px; left: 0; width: 20px; height: 2px; }
-  #crosshair.hit::before, #crosshair.hit::after { background: var(--accent); }
-  #crosshair.kill::before, #crosshair.kill::after { background: var(--amber); }
+  #crosshair::before { content: "⚔️"; }
 
   .hud-panel {
     position: absolute;
@@ -326,8 +320,7 @@
     </div>
 
     <div id="ammoWrap" class="hud-panel">
-      <div id="reloadTag">RELOADING</div>
-      <div><span id="ammoCur">30</span> <span id="ammoRes">/ 90</span></div>
+      <div id="powerLevel">⚡ 100%</div>
     </div>
 
     <div id="statsWrap" class="hud-panel">
@@ -356,13 +349,13 @@
 
   <div id="startScreen" class="screen">
     <div class="card">
-      <h1>NAVA <span>STRIKE</span></h1>
-      <p class="sub">웨이브 서바이벌 FPS · 탭/클릭하여 시작</p>
+      <h1>링크의 <span>모험</span></h1>
+      <p class="sub">젤다 스타일 액션 서바이벌 · 탭/클릭하여 시작</p>
       <div class="tips">
         <div><b>WASD</b> 이동 · <b>Shift</b> 스프린트 · <b>Space</b> 점프</div>
-        <div><b>마우스</b> 시야 · <b>좌클릭</b> 사격(연사) · <b>R</b> 재장전</div>
-        <div><b>ESC</b> 일시정지 · 오렌지=근접형, 보라=원거리형 적</div>
-        <div>📱 <b>모바일</b>: 왼쪽 조이스틱 이동 · 오른쪽 드래그 시야 · 🔫 사격 · ⤒ 점프 · ⟳ 재장전</div>
+        <div><b>마우스</b> 카메라 · <b>좌클릭</b> 검 공격 · <b>E</b> 특수 능력</div>
+        <div><b>ESC</b> 일시정지 · 빨강=몬스터, 파랑=강적</div>
+        <div>📱 <b>모바일</b>: 왼쪽 조이스틱 이동 · 오른쪽 드래그 카메라 · ⚔️ 공격 · ⤒ 점프</div>
       </div>
       <div class="sens-row">
         <label for="sensSlider">마우스 감도</label>
@@ -420,7 +413,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
 scene.add(camera);
 
 window.addEventListener("resize", () => {
@@ -576,30 +569,64 @@ scene.add(accent2);
 /* ======================================================================
    Weapon (attached to camera)
    ====================================================================== */
-const gun = new THREE.Group();
-const metal = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.75, roughness: 0.3 });
-const accentMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x330000, roughness: 0.5 });
+// Link 스타일 캐릭터 생성
+const playerGroup = new THREE.Group();
+scene.add(playerGroup);
 
-const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.13, 0.52), metal);
-const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.36, 10), metal);
-gunBarrel.rotation.x = Math.PI / 2;
-gunBarrel.position.set(0, 0.02, -0.42);
-const gunGrip = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.18, 0.09), metal);
-gunGrip.position.set(0, -0.14, 0.14);
-gunGrip.rotation.x = -0.25;
-const gunMag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.17, 0.085), metal);
-gunMag.position.set(0, -0.13, -0.03);
-gunMag.rotation.x = 0.15;
-const gunSight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.08), metal);
-gunSight.position.set(0, 0.09, -0.12);
-const gunStripe = new THREE.Mesh(new THREE.BoxGeometry(0.102, 0.02, 0.2), accentMat);
-gunStripe.position.set(0, 0.02, -0.05);
+const linkGreen = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.6, metalness: 0.1 });
+const linkSkin = new THREE.MeshStandardMaterial({ color: 0xf4a460, roughness: 0.7, metalness: 0 });
+const linkBlonde = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.7, metalness: 0 });
 
-gun.add(gunBody, gunBarrel, gunGrip, gunMag, gunSight, gunStripe);
-gun.traverse((o) => { if (o.isMesh) o.castShadow = false; });
-gun.position.set(0.26, -0.26, -0.55);
-gun.rotation.y = 0.02;
-camera.add(gun);
+// 몸통
+const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.25), linkGreen);
+torso.position.y = 0.8;
+torso.castShadow = true;
+playerGroup.add(torso);
+
+// 팔
+const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), linkGreen);
+armL.position.set(-0.35, 0.95, 0);
+armL.castShadow = true;
+playerGroup.add(armL);
+
+const armR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), linkGreen);
+armR.position.set(0.35, 0.95, 0);
+armR.castShadow = true;
+playerGroup.add(armR);
+
+// 다리
+const legL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.5, 0.16), linkGreen);
+legL.position.set(-0.15, 0.25, 0);
+legL.castShadow = true;
+playerGroup.add(legL);
+
+const legR = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.5, 0.16), linkGreen);
+legR.position.set(0.15, 0.25, 0);
+legR.castShadow = true;
+playerGroup.add(legR);
+
+// 머리
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), linkSkin);
+head.position.y = 1.5;
+head.castShadow = true;
+playerGroup.add(head);
+
+// 금색 머리
+const hair = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.25, 0.38), linkBlonde);
+hair.position.y = 1.7;
+hair.castShadow = true;
+playerGroup.add(hair);
+
+// 검
+const sword = new THREE.Group();
+const swordBlade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.2 }));
+swordBlade.position.y = 0.3;
+const swordHilt = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.08), new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.8 }));
+swordHilt.position.y = 0;
+sword.add(swordBlade, swordHilt);
+sword.position.set(0.2, 0.8, -0.3);
+playerGroup.add(sword);
+playerGroup.userData.sword = sword;
 
 const muzzleTip = new THREE.Object3D();
 muzzleTip.position.set(0, 0.02, -0.6);
@@ -647,11 +674,8 @@ const player = {
   eyeHeight: 1.7,
   health: 100,
   maxHealth: 100,
-  ammo: 60,
-  magSize: 60,
-  reserve: 360,
-  reloading: false,
-  reloadUntil: 0,
+  power: 100,
+  maxPower: 100,
   lastFire: 0,
   lastDamage: -99,
   sprinting: false,
@@ -708,9 +732,9 @@ function makeLimb(len, w, d, mat, jointX, jointY, jointZ) {
 
 function spawnEnemy(type) {
   const isShooter = type === "shooter";
-  const suitColor = isShooter ? 0x7c3aed : 0xea580c;
-  const suitDark = isShooter ? 0x5b21b6 : 0xb45309;
-  const skinColor = 0x232838;
+  const suitColor = isShooter ? 0x1e40af : 0xdc2626;
+  const suitDark = isShooter ? 0x1e3a8a : 0x991b1b;
+  const skinColor = 0x7c3a3a;
   const group = new THREE.Group();
 
   const legLen = 0.58, torsoH = 0.5, headSize = 0.3, armLen = 0.54;
@@ -870,7 +894,6 @@ function spawnDeathBurst(pos) {
 const keys = {};
 window.addEventListener("keydown", (e) => {
   keys[e.code] = true;
-  if (e.code === "KeyR") requestReload();
   if (e.code === "Escape" && gameState === "playing") togglePause(true);
 });
 window.addEventListener("keyup", (e) => { keys[e.code] = false; });
@@ -972,9 +995,6 @@ if (isTouch) {
   const jumpBtn = document.getElementById("jumpBtn");
   jumpBtn.addEventListener("touchstart", (e) => { keys.Space = true; e.preventDefault(); }, { passive: false });
   jumpBtn.addEventListener("touchend", (e) => { keys.Space = false; e.preventDefault(); }, { passive: false });
-
-  const reloadBtn = document.getElementById("reloadBtn");
-  reloadBtn.addEventListener("touchstart", (e) => { requestReload(); e.preventDefault(); }, { passive: false });
 }
 
 document.addEventListener("pointerlockchange", () => {
@@ -1100,54 +1120,47 @@ function finishReloadIfDue() {
 function tryFire() {
   const now = performance.now();
   if (gameState !== "playing") return;
-  if (player.reloading) return;
-  if (now - player.lastFire < 100) return;
-  if (player.ammo <= 0) { playClick(); requestReload(); return; }
+  if (now - player.lastFire < 250) return;
+  if (player.power < 20) return;
 
   player.lastFire = now;
-  player.ammo--;
+  player.power -= 20;
   shotsFired++;
-  updateAmmoHud();
-
-  recoil = Math.min(1, recoil + 0.55);
-  recoilPitch = Math.min(0.05, recoilPitch + 0.018);
-  shake = Math.min(1, shake + 0.25);
+  shake = Math.min(1, shake + 0.35);
   playShot();
+  updatePowerHud();
 
-  muzzleTip.getWorldPosition(muzzleWorldPos);
-  flashLight.position.copy(muzzleWorldPos);
-  flashLight.intensity = 6;
-  flashSprite.material.opacity = 1;
-  flashSprite.scale.set(0.35, 0.35, 0.35);
+  // 검 근처 범위 공격
+  const swordWorldPos = new THREE.Vector3();
+  playerGroup.userData.sword.getWorldPosition(swordWorldPos);
 
-  raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-  const hits = raycaster.intersectObjects(shootTargets, false);
-  let endPoint;
-  if (hits.length > 0) {
-    const hit = hits[0];
-    endPoint = hit.point.clone();
-    spawnSpark(endPoint, hit.face ? hit.face.normal : null, hit.object);
+  const attackRange = 2.5;
+  let hitAny = false;
 
-    const enemyRef = hit.object.userData.enemyRef;
-    if (enemyRef && enemyRef.alive) {
+  for (const enemy of enemies) {
+    const dist = swordWorldPos.distanceTo(enemy.group.position);
+    if (dist < attackRange && enemy.alive) {
       hitsLanded++;
-      const dmg = 18 + Math.random() * 6;
-      enemyRef.hp -= dmg;
-      enemyRef.stagger = 0.12;
-      score += 10;
+      const dmg = 25 + Math.random() * 15;
+      enemy.hp -= dmg;
+      enemy.stagger = 0.2;
+      score += 15;
+      hitAny = true;
+
+      // 넉백 효과
+      const knockDir = new THREE.Vector3().subVectors(enemy.group.position, player.pos).normalize();
+      enemy.knockback = knockDir.multiplyScalar(3);
+
       flashHitmarker(false);
-      updateHealthBar(enemyRef.healthBar, Math.max(0, enemyRef.hp / enemyRef.maxHp));
-      if (enemyRef.hp <= 0) {
+      updateHealthBar(enemy.healthBar, Math.max(0, enemy.hp / enemy.maxHp));
+      if (enemy.hp <= 0) {
         flashHitmarker(true);
-        killEnemy(enemyRef);
+        killEnemy(enemy);
       }
     }
-  } else {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    endPoint = camera.position.clone().add(dir.multiplyScalar(80));
   }
-  spawnTracer(muzzleWorldPos, endPoint);
+
+  if (hitAny) spawnDeathBurst(swordWorldPos);
   updateHudStats();
 }
 
@@ -1260,6 +1273,12 @@ function updatePlayer(dt) {
     updateHealthHud();
   }
 
+  // Power 회복
+  if (player.power < player.maxPower) {
+    player.power = Math.min(player.maxPower, player.power + 35 * dt);
+    updatePowerHud();
+  }
+
   bobTime += dt * (player.sprinting ? 13 : moving ? 9 : 2.2);
   const bobAmt = moving ? (player.sprinting ? 0.028 : 0.016) : 0.004;
   const bobY = Math.sin(bobTime) * bobAmt;
@@ -1269,19 +1288,27 @@ function updatePlayer(dt) {
   recoilPitch *= Math.exp(-dt * 7);
   shake *= Math.exp(-dt * 6);
 
-  gun.position.set(0.26 + bobX, -0.26 + bobY + recoil * 0.02, -0.55 + recoil * 0.09);
-  gun.rotation.x = -recoil * 0.22;
+  // 검 회전
+  playerGroup.userData.sword.rotation.z = Math.sin(bobTime) * 0.3;
 
   flashLight.intensity *= Math.max(0, 1 - dt * 22);
   flashSprite.material.opacity *= Math.max(0, 1 - dt * 20);
 
+  // 3인칭 카메라
+  playerGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
+  playerGroup.rotation.y = player.yaw;
+
   const shakeX = (Math.random() - 0.5) * shake * 0.01;
   const shakeY = (Math.random() - 0.5) * shake * 0.01;
 
-  camera.rotation.order = "YXZ";
-  camera.rotation.y = player.yaw + shakeX;
-  camera.rotation.x = player.pitch - recoilPitch + shakeY;
-  camera.position.set(player.pos.x, player.pos.y + player.eyeHeight, player.pos.z);
+  const camDist = 4;
+  const camHeight = 1.8;
+  camera.position.set(
+    player.pos.x - Math.sin(player.yaw) * camDist,
+    player.pos.y + camHeight,
+    player.pos.z - Math.cos(player.yaw) * camDist + Math.sin(player.pitch) * 2
+  );
+  camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 }
 
 function now4() { return performance.now(); }
@@ -1461,9 +1488,9 @@ function updateHealthHud() {
   fg.classList.toggle("low", frac < 0.3);
   document.getElementById("healthWrap").classList.toggle("pulse", frac < 0.25);
 }
-function updateAmmoHud() {
-  document.getElementById("ammoCur").textContent = player.ammo;
-  document.getElementById("ammoRes").textContent = `/ ${player.reserve}`;
+function updatePowerHud() {
+  const powerPercent = Math.ceil(Math.max(0, Math.min(100, player.power)));
+  document.getElementById("powerLevel").textContent = `⚡ ${powerPercent}%`;
 }
 function updateHudStats() {
   document.getElementById("scoreVal").textContent = score;
@@ -1603,15 +1630,13 @@ function resetGame() {
   player.pitch = 0;
   player.vy = 0;
   player.health = player.maxHealth;
-  player.ammo = player.magSize;
-  player.reserve = 90;
-  player.reloading = false;
+  player.power = player.maxPower;
 
   score = 0; kills = 0; shotsFired = 0; hitsLanded = 0; waveNumber = 1;
   waveInProgress = false; waveClearedAt = 0;
 
   updateHealthHud();
-  updateAmmoHud();
+  updatePowerHud();
   updateHudStats();
   document.getElementById("vignette").classList.remove("show");
 }
@@ -1666,7 +1691,7 @@ function animate() {
 animate();
 
 updateHealthHud();
-updateAmmoHud();
+updatePowerHud();
 updateHudStats();
 </script>
 </body>
