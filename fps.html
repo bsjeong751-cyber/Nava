@@ -413,12 +413,12 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x131c2e);
-scene.fog = new THREE.FogExp2(0x131c2e, 0.011);
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
 scene.add(camera);
@@ -439,9 +439,9 @@ function gridTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = size;
   const g = c.getContext("2d");
-  g.fillStyle = "#12182a";
+  g.fillStyle = "#2d5016";
   g.fillRect(0, 0, size, size);
-  g.strokeStyle = "rgba(148,163,184,0.18)";
+  g.strokeStyle = "rgba(255,255,255,0.25)";
   g.lineWidth = 2;
   const step = size / 16;
   for (let i = 0; i <= 16; i++) {
@@ -482,49 +482,49 @@ function addBox(x, z, w, d, h, color, opts = {}) {
 
 // Boundary walls
 const WALL_H = 6;
-addBox(0, -ARENA, ARENA * 2, 1, WALL_H, 0x1e293b);
-addBox(0, ARENA, ARENA * 2, 1, WALL_H, 0x1e293b);
-addBox(-ARENA, 0, 1, ARENA * 2, WALL_H, 0x1e293b);
-addBox(ARENA, 0, 1, ARENA * 2, WALL_H, 0x1e293b);
+addBox(0, -ARENA, ARENA * 2, 1, WALL_H, 0x8b7355);
+addBox(0, ARENA, ARENA * 2, 1, WALL_H, 0x8b7355);
+addBox(-ARENA, 0, 1, ARENA * 2, WALL_H, 0x8b7355);
+addBox(ARENA, 0, 1, ARENA * 2, WALL_H, 0x8b7355);
 
 // Cover / obstacles
 const OBSTACLES = [
   // Center cluster
-  [-8, -5, 4, 4, 2.5, 0x334155],
-  [5, -8, 3.5, 3.5, 2.8, 0x3f4a5f],
-  [0, 3, 4, 3, 3.2, 0x475569],
+  [-8, -5, 4, 4, 2.5, 0xa0826d],
+  [5, -8, 3.5, 3.5, 2.8, 0xb8956a],
+  [0, 3, 4, 3, 3.2, 0x9d7e73],
 
   // North wall
-  [-15, 12, 5, 3, 2.3, 0x334155],
-  [8, 14, 3.5, 4, 2.6, 0x3f4a5f],
-  [18, 10, 4, 2.5, 3.1, 0x475569],
+  [-15, 12, 5, 3, 2.3, 0xa0826d],
+  [8, 14, 3.5, 4, 2.6, 0xb8956a],
+  [18, 10, 4, 2.5, 3.1, 0x9d7e73],
 
   // South wall
-  [-12, -15, 3.5, 5, 2.4, 0x3f4a5f],
-  [10, -18, 5, 3, 2.2, 0x334155],
-  [20, -12, 3, 3, 3.5, 0x475569],
+  [-12, -15, 3.5, 5, 2.4, 0xb8956a],
+  [10, -18, 5, 3, 2.2, 0xa0826d],
+  [20, -12, 3, 3, 3.5, 0x9d7e73],
 
   // West side
-  [-22, -8, 2.5, 4, 2.8, 0x334155],
-  [-20, 6, 4, 2.5, 2.5, 0x3f4a5f],
-  [-18, 18, 3, 3.5, 3.2, 0x475569],
+  [-22, -8, 2.5, 4, 2.8, 0xa0826d],
+  [-20, 6, 4, 2.5, 2.5, 0xb8956a],
+  [-18, 18, 3, 3.5, 3.2, 0x9d7e73],
 
   // East side
-  [22, 5, 2.5, 5, 2.6, 0x3f4a5f],
-  [20, -6, 3.5, 3, 2.9, 0x334155],
-  [21, 16, 4, 3, 2.4, 0x475569],
+  [22, 5, 2.5, 5, 2.6, 0xb8956a],
+  [20, -6, 3.5, 3, 2.9, 0xa0826d],
+  [21, 16, 4, 3, 2.4, 0x9d7e73],
 
   // Diagonal features
-  [-6, 19, 3.5, 3, 3.8, 0x334155],
-  [14, -22, 3, 4, 2.3, 0x3f4a5f],
+  [-6, 19, 3.5, 3, 3.8, 0xa0826d],
+  [14, -22, 3, 4, 2.3, 0xb8956a],
 ];
 OBSTACLES.forEach(([x, z, w, d, h, color]) => addBox(x, z, w, d, h, color));
 
 /* Sky */
 const skyMat = new THREE.ShaderMaterial({
   uniforms: {
-    topColor: { value: new THREE.Color(0x5a7ab8) },
-    bottomColor: { value: new THREE.Color(0x2a3a4e) },
+    topColor: { value: new THREE.Color(0x87ceeb) },
+    bottomColor: { value: new THREE.Color(0xb8e0f0) },
     offset: { value: 8 },
     exponent: { value: 0.6 },
   },
@@ -551,9 +551,9 @@ const skyMat = new THREE.ShaderMaterial({
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(260, 24, 16), skyMat));
 
 /* Lighting */
-scene.add(new THREE.HemisphereLight(0x5b73a8, 0x0a0e17, 1.05));
-scene.add(new THREE.AmbientLight(0x445577, 0.35));
-const sun = new THREE.DirectionalLight(0xfff2dd, 1.5);
+scene.add(new THREE.HemisphereLight(0x87ceeb, 0x90ee90, 1.2));
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xfff8dc, 2.0);
 sun.position.set(20, 32, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
