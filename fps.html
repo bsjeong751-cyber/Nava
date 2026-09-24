@@ -107,6 +107,45 @@
     cursor: pointer;
   }
   button:hover { filter: brightness(1.08); }
+
+  #touchUI { display: none; }
+  body.touch #touchUI { display: block; }
+
+  #joyBase {
+    position: fixed;
+    left: 20px; bottom: 80px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.2);
+    z-index: 5;
+  }
+  #joyStick {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 50px; height: 50px;
+    margin: -25px 0 0 -25px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+
+  .touch-btn {
+    position: fixed;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: rgba(239,68,68,0.4);
+    border: 2px solid rgba(239,68,68,0.7);
+    color: #fff;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    cursor: pointer;
+  }
+  #fireBtn { right: 20px; bottom: 80px; }
+  #jumpBtn { right: 20px; bottom: 160px; }
 </style>
 </head>
 <body>
@@ -154,6 +193,12 @@
       </div>
       <button id="restartBtn">다시 도전</button>
     </div>
+  </div>
+
+  <div id="touchUI">
+    <div id="joyBase"><div id="joyStick"></div></div>
+    <div id="fireBtn" class="touch-btn">⚔️</div>
+    <div id="jumpBtn" class="touch-btn">⤒</div>
   </div>
 
 <script type="importmap">
@@ -341,6 +386,10 @@ function updatePlayer(dt) {
   if (keys.KeyA) moveX -= 1;
   if (keys.KeyD) moveX += 1;
 
+  // 터치 이동 추가
+  moveX += touchMoveX;
+  moveZ += touchMoveZ;
+
   const speed = 4.4;
   const wish = new THREE.Vector3();
   if (moveX || moveZ) {
@@ -505,6 +554,109 @@ document.getElementById("restartBtn").addEventListener("click", () => {
   document.getElementById("startScreen").classList.remove("hidden");
   document.getElementById("hud").classList.remove("active");
 });
+
+// 모바일 터치 지원
+const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+if (isTouch) {
+  document.body.classList.add("touch");
+
+  const joyZone = document.getElementById("joyBase");
+  const joyStick = document.getElementById("joyStick");
+  const fireBtn = document.getElementById("fireBtn");
+  const jumpBtn = document.getElementById("jumpBtn");
+
+  let joyTouchId = null;
+  let touchMoveX = 0, touchMoveZ = 0;
+
+  function getJoyCenter() {
+    const r = joyZone.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  joyZone.addEventListener("touchstart", (e) => {
+    if (joyTouchId === null && gameState === "playing") {
+      joyTouchId = e.touches[0].identifier;
+      const t = e.touches[0];
+      const c = getJoyCenter();
+      const dx = t.clientX - c.x, dy = t.clientY - c.y;
+      const dist = Math.hypot(dx, dy);
+      const maxR = 40;
+      if (dist > maxR) {
+        const ratio = maxR / dist;
+        joyStick.style.transform = `translate(${dx * ratio}px, ${dy * ratio}px)`;
+      } else {
+        joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+      }
+      touchMoveX = dx / 50;
+      touchMoveZ = dy / 50;
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (joyTouchId !== null && gameState === "playing") {
+      for (const t of e.touches) {
+        if (t.identifier === joyTouchId) {
+          const c = getJoyCenter();
+          const dx = t.clientX - c.x, dy = t.clientY - c.y;
+          const dist = Math.hypot(dx, dy);
+          const maxR = 40;
+          if (dist > maxR) {
+            const ratio = maxR / dist;
+            joyStick.style.transform = `translate(${dx * ratio}px, ${dy * ratio}px)`;
+            touchMoveX = (dx * ratio) / 50;
+            touchMoveZ = (dy * ratio) / 50;
+          } else {
+            joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+            touchMoveX = dx / 50;
+            touchMoveZ = dy / 50;
+          }
+        }
+      }
+    }
+
+    // 드래그로 카메라 회전
+    if (gameState === "playing" && e.touches.length === 1) {
+      const t = e.touches[0];
+      if (t.clientX > window.innerWidth / 2) {
+        player.yaw -= (t.clientX - lastTouchX) * 0.005;
+        player.pitch -= (t.clientY - lastTouchY) * 0.005;
+        player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
+      }
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyTouchId) {
+        joyTouchId = null;
+        touchMoveX = 0;
+        touchMoveZ = 0;
+        joyStick.style.transform = "translate(0, 0)";
+      }
+    }
+  });
+
+  fireBtn.addEventListener("touchstart", () => {
+    mouseDown = true;
+    fireBtn.style.opacity = "0.7";
+  });
+  fireBtn.addEventListener("touchend", () => {
+    mouseDown = false;
+    fireBtn.style.opacity = "0.4";
+  });
+
+  jumpBtn.addEventListener("touchstart", () => {
+    keys.Space = true;
+  });
+  jumpBtn.addEventListener("touchend", () => {
+    keys.Space = false;
+  });
+
+  let lastTouchX = 0, lastTouchY = 0;
+}
+
 
 function updateHud() {
   document.getElementById("healthNum").textContent = Math.ceil(player.health);
