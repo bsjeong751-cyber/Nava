@@ -447,39 +447,111 @@ function buildPlatform(x, z) {
 }
 buildPlatform(0, 22);
 
-// ---------- Player ----------
+// ---------- Player (stylized Link) ----------
 const playerGroup = new THREE.Group();
 scene.add(playerGroup);
 
-const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.25), new THREE.MeshStandardMaterial({ color: 0x2d5016 }));
-torso.position.y = 0.8;
+const skinMat = new THREE.MeshStandardMaterial({ color: 0xf0a876, roughness: 0.7 });
+const tunicMat = new THREE.MeshStandardMaterial({ color: 0x2f6b30, roughness: 0.8 });
+const sleeveMat = new THREE.MeshStandardMaterial({ color: 0xf4f0e0, roughness: 0.8 });
+const beltMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.7 });
+const bootMat = new THREE.MeshStandardMaterial({ color: 0x5a3d24, roughness: 0.8 });
+const hairMat = new THREE.MeshStandardMaterial({ color: 0xffd966, roughness: 0.6 });
+const capMat = new THREE.MeshStandardMaterial({ color: 0x2f6b30, roughness: 0.8 });
+
+function limb(w, h, d, mat, pivotY) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.y = -h / 2;
+  m.castShadow = true;
+  g.add(m);
+  g.position.y = pivotY;
+  return g;
+}
+
+// hips + legs
+const hipY = 0.62;
+const legL = limb(0.13, 0.62, 0.15, bootMat, hipY);
+legL.position.x = -0.11;
+playerGroup.add(legL);
+const legR = limb(0.13, 0.62, 0.15, bootMat, hipY);
+legR.position.x = 0.11;
+playerGroup.add(legR);
+
+// torso (tunic, tapered via two stacked boxes)
+const hips = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.16, 0.24), beltMat);
+hips.position.y = hipY + 0.02;
+hips.castShadow = true;
+playerGroup.add(hips);
+
+const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.26), tunicMat);
+torso.position.y = hipY + 0.34;
 torso.castShadow = true;
 playerGroup.add(torso);
 
-const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), new THREE.MeshStandardMaterial({ color: 0xf4a460 }));
-head.position.y = 1.5;
+const chestStrap = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.08, 0.28), beltMat);
+chestStrap.position.y = hipY + 0.5;
+chestStrap.castShadow = true;
+playerGroup.add(chestStrap);
+
+// arms
+const shoulderY = hipY + 0.56;
+const armL = limb(0.13, 0.42, 0.15, sleeveMat, shoulderY);
+armL.position.x = -0.28;
+playerGroup.add(armL);
+const armR = limb(0.13, 0.42, 0.15, sleeveMat, shoulderY);
+armR.position.x = 0.28;
+playerGroup.add(armR);
+
+// head + hair + iconic pointed cap
+const headY = hipY + 0.86;
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.32), skinMat);
+head.position.y = headY;
 head.castShadow = true;
 playerGroup.add(head);
 
-const hair = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.25, 0.38), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
-hair.position.y = 1.7;
-hair.castShadow = true;
+const hair = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.34), hairMat);
+hair.position.set(0, headY + 0.02, 0.02);
 playerGroup.add(hair);
+const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), hairMat);
+fringe.position.set(0, headY - 0.02, 0.17);
+playerGroup.add(fringe);
 
-const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 12), new THREE.MeshStandardMaterial({ color: 0x3b6fb5, metalness: 0.3, roughness: 0.5 }));
-shield.rotation.z = Math.PI / 2;
-shield.position.set(-0.32, 0.85, 0.05);
-shield.castShadow = true;
-playerGroup.add(shield);
+const cap = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.5, 8), capMat);
+cap.position.set(0, headY + 0.34, -0.05);
+cap.rotation.z = 0.18;
+cap.castShadow = true;
+playerGroup.add(cap);
 
+// shield strapped to back
+const shieldGroup = new THREE.Group();
+const shieldFace = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 12), new THREE.MeshStandardMaterial({ color: 0x3b6fb5, metalness: 0.3, roughness: 0.5 }));
+shieldFace.rotation.x = Math.PI / 2;
+shieldFace.castShadow = true;
+shieldGroup.add(shieldFace);
+const shieldRim = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.03, 6, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.6, roughness: 0.4 }));
+shieldRim.rotation.x = Math.PI / 2;
+shieldGroup.add(shieldRim);
+shieldGroup.position.set(0, hipY + 0.42, -0.2);
+shieldGroup.rotation.y = 0.15;
+playerGroup.add(shieldGroup);
+
+// sword held at hip, swings forward on attack
 const sword = new THREE.Group();
 const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0xd8d8e0, metalness: 0.9, roughness: 0.25 }));
-blade.position.y = 0.3;
+blade.position.y = 0.34;
+blade.castShadow = true;
 sword.add(blade);
-const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.7 }));
+const guard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.7 }));
+guard.position.y = 0.02;
+sword.add(guard);
+const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.06), new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.8 }));
+hilt.position.y = -0.08;
 sword.add(hilt);
-sword.position.set(0.2, 0.8, -0.3);
+sword.position.set(0.3, hipY + 0.3, -0.1);
+sword.rotation.z = -0.3;
 playerGroup.add(sword);
+const swordRestRot = { x: sword.rotation.x, z: sword.rotation.z };
 
 const player = {
   pos: new THREE.Vector3(0, 0, 22),
@@ -490,6 +562,7 @@ const player = {
   power: 100, maxPower: 100,
   lastFire: 0, lastDamage: -99,
 };
+let walkT = 0, attackAnimT = 0;
 
 const enemies = [];
 let score = 0, kills = 0, waveNum = 1;
@@ -657,6 +730,33 @@ function updatePlayer(dt) {
   camera.position.set(player.pos.x - Math.sin(player.yaw) * 4, player.pos.y + 1.8, player.pos.z - Math.cos(player.yaw) * 4);
   camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
   sun.target.position.copy(player.pos);
+
+  const speed = Math.hypot(player.vel.x, player.vel.z);
+  if (speed > 0.3) {
+    walkT += dt * (5 + speed);
+    const swing = Math.sin(walkT) * Math.min(0.7, speed * 0.18);
+    legL.rotation.x = swing;
+    legR.rotation.x = -swing;
+    armL.rotation.x = -swing * 0.8;
+    if (!attackAnimT) armR.rotation.x = swing * 0.8;
+  } else {
+    walkT = 0;
+    legL.rotation.x += (0 - legL.rotation.x) * 0.2;
+    legR.rotation.x += (0 - legR.rotation.x) * 0.2;
+    armL.rotation.x += (0 - armL.rotation.x) * 0.2;
+    if (!attackAnimT) armR.rotation.x += (0 - armR.rotation.x) * 0.2;
+  }
+
+  if (attackAnimT > 0) {
+    attackAnimT = Math.max(0, attackAnimT - dt * 4.5);
+    const s = Math.sin(attackAnimT * Math.PI);
+    armR.rotation.x = -0.6 - s * 0.9;
+    sword.rotation.z = swordRestRot.z - s * 1.9;
+    sword.rotation.x = s * 0.6;
+  } else {
+    sword.rotation.z += (swordRestRot.z - sword.rotation.z) * 0.3;
+    sword.rotation.x += (0 - sword.rotation.x) * 0.3;
+  }
 }
 
 function updateEnemies(dt) {
@@ -776,6 +876,7 @@ function animate() {
     if (mouseDown && player.power >= 20 && performance.now() - player.lastFire > 250) {
       player.lastFire = performance.now();
       player.power -= 20;
+      attackAnimT = 1;
       const swordPos = new THREE.Vector3();
       sword.getWorldPosition(swordPos);
       for (const e of enemies) {
