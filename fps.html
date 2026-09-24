@@ -457,7 +457,6 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 const colliders = []; // {cx, cz, hx, hz}
-const shootTargets = [ground];
 
 function addBox(x, z, w, d, h, color, opts = {}) {
   const mesh = new THREE.Mesh(
@@ -468,7 +467,6 @@ function addBox(x, z, w, d, h, color, opts = {}) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
-  shootTargets.push(mesh);
   if (!opts.noCollide) colliders.push({ cx: x, cz: z, hx: w / 2, hz: d / 2 });
   return mesh;
 }
@@ -774,7 +772,6 @@ function spawnEnemy(type) {
   scene.add(group);
 
   const shootableMeshes = [torso, head, armL.mesh, armR.mesh, legL.mesh, legR.mesh];
-  shootableMeshes.forEach((m) => shootTargets.push(m));
 
   const healthBar = makeHealthBarGroup();
   scene.add(healthBar);
@@ -845,10 +842,6 @@ function killEnemy(enemy) {
   enemy.alive = false;
   spawnDeathBurst(enemy.group.position);
   scene.remove(enemy.healthBar);
-  enemy.shootParts.forEach((m) => {
-    const si = shootTargets.indexOf(m);
-    if (si >= 0) shootTargets.splice(si, 1);
-  });
   const idx = enemies.indexOf(enemy);
   if (idx >= 0) enemies.splice(idx, 1);
   enemy.dying = true;
@@ -1098,24 +1091,6 @@ function playPlayerHurt() {
 const raycaster = new THREE.Raycaster();
 raycaster.far = 120;
 
-function requestReload() {
-  if (player.reloading || player.ammo === player.magSize || player.reserve <= 0) return;
-  player.reloading = true;
-  player.reloadUntil = performance.now() + 1350;
-  document.getElementById("reloadTag").classList.add("show");
-  playReloadSound();
-}
-
-function finishReloadIfDue() {
-  if (player.reloading && performance.now() >= player.reloadUntil) {
-    const need = player.magSize - player.ammo;
-    const take = Math.min(need, player.reserve);
-    player.ammo += take;
-    player.reserve -= take;
-    player.reloading = false;
-    document.getElementById("reloadTag").classList.remove("show");
-  }
-}
 
 function tryFire() {
   const now = performance.now();
@@ -1641,10 +1616,6 @@ function resetGame() {
 function killEnemyQuiet(enemy) {
   scene.remove(enemy.group);
   scene.remove(enemy.healthBar);
-  enemy.shootParts.forEach((m) => {
-    const si = shootTargets.indexOf(m);
-    if (si >= 0) shootTargets.splice(si, 1);
-  });
   const idx = enemies.indexOf(enemy);
   if (idx >= 0) enemies.splice(idx, 1);
 }
@@ -1672,7 +1643,6 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (gameState === "playing") {
-    finishReloadIfDue();
     updatePlayer(dt);
     camera.updateMatrixWorld();
     if (mouseDown) tryFire();
